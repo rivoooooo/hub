@@ -21,6 +21,11 @@ function BrowserControl(): React.JSX.Element {
   const [width, setWidth] = useState(1024)
   const [height, setHeight] = useState(768)
   const [locked, setLocked] = useState(false)
+  const titleBarModes = ['default', 'hidden', 'transparent'] as const
+  type TitleBarMode = (typeof titleBarModes)[number]
+
+  const [titleBarMode, setTitleBarMode] = useState<TitleBarMode>('hidden')
+  const [toolbarVisible, setToolbarVisible] = useState(false)
 
   useEffect(() => {
     void window.browserApi.getState().then((s) => {
@@ -29,6 +34,11 @@ function BrowserControl(): React.JSX.Element {
       setWidth(s.width)
       setHeight(s.height)
       setLocked(s.locked)
+    })
+
+    void window.settingsApi.get().then((s) => {
+      setTitleBarMode(s.browserTitleBarMode as TitleBarMode)
+      setToolbarVisible(s.toolbarVisible)
     })
 
     const unsubscribe = window.browserApi.onStateChange((s) => {
@@ -71,6 +81,16 @@ function BrowserControl(): React.JSX.Element {
     },
     [handleNavigate]
   )
+
+  const handleTitleBarModeChange = useCallback((mode: TitleBarMode) => {
+    setTitleBarMode(mode)
+    void window.settingsApi.set('browserTitleBarMode', mode)
+  }, [])
+
+  const handleToolbarToggle = useCallback((checked: boolean) => {
+    setToolbarVisible(checked)
+    void window.settingsApi.set('toolbarVisible', checked)
+  }, [])
 
   return (
     <div className="w-full max-w-[520px] mt-[100px] mx-auto p-[24px] border-[3px] border-black bg-white">
@@ -142,6 +162,70 @@ function BrowserControl(): React.JSX.Element {
           </span>
           <span className="font-body text-[16px] text-black">Lock window size</span>
         </label>
+      </div>
+
+      {/* Title bar mode */}
+      <div className="pb-[24px]">
+        <label className="block font-headline text-[14px] uppercase tracking-wider text-black pb-[8px]">
+          Title Bar
+        </label>
+        <div className="flex flex-col gap-[8px]">
+          {titleBarModes.map((mode) => {
+            const checked = titleBarMode === mode
+            const labels: Record<TitleBarMode, string> = {
+              default: 'Show title bar',
+              hidden: 'Hidden (system UI)',
+              transparent: 'Frameless (immersive)'
+            }
+            return (
+              <label key={mode} className="flex items-center gap-[8px] cursor-pointer select-none">
+                <span className="relative w-[20px] h-[20px]">
+                  <input
+                    type="radio"
+                    name="titleBarMode"
+                    className="peer w-[20px] h-[20px] rounded-full border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms]"
+                    checked={checked}
+                    onChange={() => handleTitleBarModeChange(mode)}
+                  />
+                  {/* Inner dot — only visible when checked */}
+                  <span className="absolute inset-[5px] rounded-full bg-white pointer-events-none hidden peer-checked:block" />
+                </span>
+                <span className="font-body text-[16px] text-black">{labels[mode]}</span>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="pb-[24px]">
+        <label className="flex items-center gap-[8px] cursor-pointer select-none">
+          <span className="relative w-[20px] h-[20px]">
+            <input
+              type="checkbox"
+              className="peer w-[20px] h-[20px] border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms]"
+              checked={toolbarVisible}
+              onChange={(e) => handleToolbarToggle(e.target.checked)}
+            />
+            <svg
+              className="absolute inset-0 w-[20px] h-[20px] pointer-events-none hidden peer-checked:block"
+              viewBox="0 0 20 20"
+            >
+              <polyline
+                points="5,10 9,14 15,6"
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+              />
+            </svg>
+          </span>
+          <span className="font-body text-[16px] text-black">Show side toolbar</span>
+        </label>
+        <p className="font-mono text-[13px] leading-[1.5] text-black opacity-60 pt-[4px]">
+          A separate toolbar panel attaches to the left side of the browser window.
+        </p>
       </div>
 
       {/* Open / Close */}

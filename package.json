@@ -28,6 +28,7 @@
     "@tanstack/react-router": "^1.170.15",
     "@tanstack/react-router-devtools": "^1.167.0",
     "electron-updater": "^6.3.9",
+    "lucide-react": "^1.18.0",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {

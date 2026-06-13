@@ -3,8 +3,19 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { BrowserManager } from './browser-manager'
+import * as settings from './settings-store'
 
 let browserManager: BrowserManager | null = null
+
+function titleBarOptions(): {
+  titleBarStyle?: 'hidden' | 'default'
+  titleBarOverlay?: { height: number }
+} {
+  return {
+    titleBarStyle: 'hidden',
+    titleBarOverlay: process.platform === 'darwin' ? { height: 47 } : undefined
+  }
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -13,6 +24,7 @@ function createWindow(): void {
     height: 670,
     show: false,
     autoHideMenuBar: true,
+    ...titleBarOptions(),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -61,6 +73,7 @@ app.whenReady().then(() => {
       width: 700,
       height: 500,
       autoHideMenuBar: true,
+      ...titleBarOptions(),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         sandbox: false
@@ -87,6 +100,18 @@ app.whenReady().then(() => {
   )
   ipcMain.handle('browser:lock', (_event, locked: boolean) => browserManager!.setLock(locked))
   ipcMain.handle('browser:get-state', () => browserManager!.getState())
+
+  // Window controls for the browser wrapper toolbar
+  ipcMain.handle('browser:minimize', () => browserManager!.minimize())
+  ipcMain.handle('browser:maximize-toggle', () => browserManager!.toggleMaximize())
+  ipcMain.handle('browser:close-window', () => browserManager!.close())
+  ipcMain.handle('browser:open-devtools', () => browserManager!.openDevTools())
+
+  // Settings
+  ipcMain.handle('settings:get', () => settings.getAll())
+  ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
+    settings.set(key as keyof settings.SettingsData, value as never)
+  })
 
   createWindow()
 

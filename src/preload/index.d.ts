@@ -18,6 +18,23 @@ interface BrowserApi {
   onStateChange: (callback: (state: BrowserState) => void) => () => void
 }
 
+interface SettingsData {
+  browserTitleBarMode: 'default' | 'hidden' | 'transparent'
+  toolbarVisible: boolean
+}
+
+interface SettingsApi {
+  get: () => Promise<SettingsData>
+  set: (key: string, value: unknown) => Promise<void>
+}
+
+interface BrowserControls {
+  minimize: () => Promise<void>
+  toggleMaximize: () => Promise<void>
+  close: () => Promise<void>
+  openDevTools: () => Promise<void>
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -25,5 +42,7 @@ declare global {
       openRoute: (route: string) => void
     }
     browserApi: BrowserApi
+    settingsApi: SettingsApi
+    browserControls: BrowserControls
   }
 }
