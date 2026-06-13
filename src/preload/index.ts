@@ -27,6 +27,35 @@ const settingsApi = {
     ipcRenderer.invoke('settings:set', key, value)
 }
 
+interface BridgeMethod {
+  name: string
+  acceptParams: boolean
+  code: boolean
+  returnValue: string
+}
+
+interface BridgeFullConfig {
+  enabled: boolean
+  globalName: string
+  methods: BridgeMethod[]
+}
+
+interface BridgeApi {
+  getConfig: () => Promise<BridgeFullConfig>
+  setConfig: (config: BridgeFullConfig) => Promise<void>
+  exportConfig: () => Promise<string>
+  importConfig: (json: string) => Promise<BridgeFullConfig>
+}
+
+const bridgeApi: BridgeApi = {
+  getConfig: (): Promise<BridgeFullConfig> => ipcRenderer.invoke('bridge:get-config'),
+  setConfig: (config: BridgeFullConfig): Promise<void> =>
+    ipcRenderer.invoke('bridge:set-config', config),
+  exportConfig: (): Promise<string> => ipcRenderer.invoke('bridge:export-config'),
+  importConfig: (json: string): Promise<BridgeFullConfig> =>
+    ipcRenderer.invoke('bridge:import-config', json)
+}
+
 const browserControls = {
   minimize: (): Promise<void> => ipcRenderer.invoke('browser:minimize'),
   toggleMaximize: (): Promise<void> => ipcRenderer.invoke('browser:maximize-toggle'),
@@ -57,6 +86,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
     contextBridge.exposeInMainWorld('browserApi', browserApi)
+    contextBridge.exposeInMainWorld('bridgeApi', bridgeApi)
     contextBridge.exposeInMainWorld('settingsApi', settingsApi)
     contextBridge.exposeInMainWorld('browserControls', browserControls)
   } catch (error) {
@@ -69,6 +99,8 @@ if (process.contextIsolated) {
   window.api = api
   // @ts-expect-error (define in dts)
   window.browserApi = browserApi
+  // @ts-expect-error (define in dts)
+  window.bridgeApi = bridgeApi
   // @ts-expect-error (define in dts)
   window.settingsApi = settingsApi
   // @ts-expect-error (define in dts)

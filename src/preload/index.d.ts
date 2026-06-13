@@ -28,6 +28,26 @@ interface SettingsApi {
   set: (key: string, value: unknown) => Promise<void>
 }
 
+interface BridgeMethod {
+  name: string
+  acceptParams: boolean
+  code: boolean
+  returnValue: string
+}
+
+interface BridgeFullConfig {
+  enabled: boolean
+  globalName: string
+  methods: BridgeMethod[]
+}
+
+interface BridgeApi {
+  getConfig: () => Promise<BridgeFullConfig>
+  setConfig: (config: BridgeFullConfig) => Promise<void>
+  exportConfig: () => Promise<string>
+  importConfig: (json: string) => Promise<BridgeFullConfig>
+}
+
 interface BrowserControls {
   minimize: () => Promise<void>
   toggleMaximize: () => Promise<void>
@@ -42,6 +62,7 @@ declare global {
       openRoute: (route: string) => void
     }
     browserApi: BrowserApi
+    bridgeApi: BridgeApi
     settingsApi: SettingsApi
     browserControls: BrowserControls
   }

@@ -2,6 +2,7 @@ import { BrowserWindow, WebContentsView } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import * as settings from './settings-store'
+import * as bridgeStore from './bridge-store'
 
 export interface BrowserState {
   open: boolean
@@ -26,6 +27,8 @@ export class BrowserManager {
   private contentView: WebContentsView | null = null
   private toolbarMode = false
   private state: BrowserState = { ...DEFAULT_STATE }
+  /** Set of webContents ids that already have a bridge did-finish-load listener attached. */
+  private bridgeListeners = new Set<number>()
 
   open(): BrowserState {
     if (this.window && !this.window.isDestroyed()) {
@@ -65,6 +68,9 @@ export class BrowserManager {
 
     this.window = new BrowserWindow(windowOpts)
 
+    const bridgeConfig = bridgeStore.getRaw()
+    const bridgeEnabled = bridgeConfig.enabled
+
     if (this.toolbarMode) {
       // Load toolbar page (left 64px)
       if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -85,9 +91,19 @@ export class BrowserManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       void this.contentView.webContents.loadURL(this.state.url)
+
+      // Inject bridge after page loads (only if enabled)
+      if (bridgeEnabled) {
+        this.ensureBridgeListener(this.contentView!.webContents)
+      }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       void this.window.loadURL(this.state.url)
+
+      // Inject bridge after page loads (only if enabled)
+      if (bridgeEnabled) {
+        this.ensureBridgeListener(this.window!.webContents)
+      }
     }
 
     if (this.state.locked) {
@@ -191,6 +207,85 @@ export class BrowserManager {
     } else if (this.window && !this.window.isDestroyed()) {
       this.window.webContents.openDevTools({ mode: 'detach' })
     }
+  }
+
+  /**
+   * Re-inject the bridge object into the target page with the latest config.
+   * Also ensures the did-finish-load listener is registered so future
+   * navigations also get the bridge injected.
+   */
+  refreshBridge(): void {
+    const config = bridgeStore.getRaw()
+    if (!config.enabled) return
+
+    const wc = this.toolbarMode ? this.contentView?.webContents : this.window?.webContents
+    if (wc && !wc.isDestroyed()) {
+      this.injectBridge(wc)
+      this.ensureBridgeListener(wc)
+    }
+  }
+
+  /**
+   * Register a did-finish-load listener for bridge injection if not already
+   * registered, so that page navigations always re-inject the bridge.
+   */
+  private ensureBridgeListener(webContents: Electron.WebContents): void {
+    // Avoid duplicate listeners by tracking webContents ids
+    const id = webContents.id
+    if (this.bridgeListeners.has(id)) return
+    this.bridgeListeners.add(id)
+
+    webContents.on('did-finish-load', () => {
+      this.injectBridge(webContents)
+    })
+
+    // Clean up the set entry when the webContents is destroyed
+    webContents.on('destroyed', () => {
+      this.bridgeListeners.delete(id)
+    })
+  }
+
+  /**
+   * Inject the bridge object into a WebContents using executeJavaScript.
+   * The bridge is built dynamically from the current config.
+   */
+  private injectBridge(webContents: Electron.WebContents): void {
+    if (webContents.isDestroyed()) return
+
+    const config = bridgeStore.getRaw()
+    if (!config.enabled || !config.globalName) return
+
+    const methodsCode = config.methods
+      .map((m) => {
+        const escaped = m.returnValue
+          .replace(/\\/g, '\\\\')
+          .replace(/'/g, "\\'")
+          .replace(/\n/g, '\\n')
+        if (m.code) {
+          // code mode — user's returnValue is a function body
+          const body = escaped.startsWith('return ') ? escaped : `return ${escaped}`
+          if (m.acceptParams) {
+            return `'${m.name}': function(...args) { ${body} }`
+          } else {
+            return `'${m.name}': function() { ${body} }`
+          }
+        } else {
+          // static mode — return the string as-is
+          const val = JSON.stringify(m.returnValue)
+          if (m.acceptParams) {
+            return `'${m.name}': function(...args) { return ${val} }`
+          } else {
+            return `'${m.name}': function() { return ${val} }`
+          }
+        }
+      })
+      .join(',\n')
+
+    const js = `(function(){window['${config.globalName}']={${methodsCode}};})()`
+
+    webContents.executeJavaScript(js).catch(() => {
+      // Inject may fail if page isn't ready — that's fine
+    })
   }
 
   private layoutContentView(): void {

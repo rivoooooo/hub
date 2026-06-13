@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { BrowserManager } from './browser-manager'
 import * as settings from './settings-store'
+import * as bridgeStore from './bridge-store'
 
 // Single instance lock — prevent multiple app instances.
 // On Windows/Linux, clicking the taskbar icon will trigger 'second-instance'
@@ -146,6 +147,20 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:get', () => settings.getAll())
   ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
     settings.set(key as keyof settings.SettingsData, value as never)
+  })
+
+  // Bridge (async — used by renderer settings UI)
+  ipcMain.handle('bridge:get-config', () => bridgeStore.getConfig())
+  ipcMain.handle('bridge:set-config', (_event, config: bridgeStore.BridgeConfig) => {
+    bridgeStore.setConfig(config)
+    // Notify all browser WebContentsViews to refresh bridge
+    browserManager?.refreshBridge()
+  })
+  ipcMain.handle('bridge:export-config', () => bridgeStore.exportConfig())
+  ipcMain.handle('bridge:import-config', (_event, json: string) => {
+    const config = bridgeStore.importConfig(json)
+    browserManager?.refreshBridge()
+    return config
   })
 
   createWindow()
