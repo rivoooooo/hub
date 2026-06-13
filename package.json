@@ -19,6 +19,7 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
+    "download-electron": "node scripts/download-electron.mjs",
     "prepare": "vp config"
   },
   "dependencies": {
