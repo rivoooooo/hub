@@ -1,7 +1,7 @@
 {
-  "name": "dev-browser",
+  "name": "dev-home",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "Dev Home — developer tools hub with browser control and more",
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
