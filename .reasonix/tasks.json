@@ -1,0 +1,116 @@
+[
+  {
+    "id": 1,
+    "description": "构建 Bridge 配置模型与持久化层",
+    "status": "completed",
+    "children": [
+      {
+        "id": "1.1",
+        "description": "在 src/main/ 下新建 bridge-store.ts，定义 BridgeConfig/BridgeMethod 接口及默认配置",
+        "status": "completed",
+        "evidence": "Created src/main/bridge-store.ts with BridgeConfig/BridgeMethod interfaces, default config, getConfig/setConfig/exportConfig/importConfig methods, persisted to userData/bridge-config.json"
+      },
+      {
+        "id": "1.2",
+        "description": "实现 getConfig/setConfig/exportConfig/importConfig 方法，持久化到 JSON",
+        "status": "completed",
+        "evidence": "All methods implemented in bridge-store.ts"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "description": "创建 Bridge preload 脚本用于注入目标页面（改用 executeJavaScript 方式）",
+    "status": "completed",
+    "children": [
+      {
+        "id": "2.1",
+        "description": "在 browser-manager.ts 中实现 injectBridge() 方法",
+        "status": "completed",
+        "evidence": "Implemented injectBridge() using webContents.executeJavaScript() — builds dynamic bridge object from config"
+      },
+      {
+        "id": "2.2",
+        "description": "在 did-finish-load 事件中自动注入 bridge",
+        "status": "completed",
+        "evidence": "Added did-finish-load listeners in open() for both toolbar and non-toolbar modes"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "description": "更新 BrowserManager 启用 Bridge 注入",
+    "status": "completed",
+    "children": [
+      {
+        "id": "3.1",
+        "description": "在 open() 中移除 preload 注入逻辑，保留 sandbox: true",
+        "status": "completed",
+        "evidence": "Reverted WebContentsView and BrowserWindow to original sandbox: true config, removed BridgeManager.getBridgePreload()"
+      },
+      {
+        "id": "3.2",
+        "description": "实现 refreshBridge() 重新注入 bridge",
+        "status": "completed",
+        "evidence": "refreshBridge() now calls injectBridge() again — no page reload needed"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "description": "新增 Bridge IPC 通道与主进程 API",
+    "status": "completed",
+    "children": [
+      {
+        "id": "4.1",
+        "description": "在 src/main/index.ts 注册 bridge IPC handlers",
+        "status": "completed",
+        "evidence": "Registered async handlers bridge:get-config/set-config/export-config/import-config. Removed unused sync handler."
+      },
+      {
+        "id": "4.2",
+        "description": "在 preload/index.ts 暴露 bridgeApi 并更新类型声明",
+        "status": "completed",
+        "evidence": "Added bridgeApi with getConfig/setConfig/exportConfig/importConfig, exposed via contextBridge, updated index.d.ts types"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "description": "Browser 页面新增 Bridge 配置 UI",
+    "status": "completed",
+    "children": [
+      {
+        "id": "5.1",
+        "description": "在 browser.tsx 中新增 Bridge 配置面板（开关、globalName、方法列表）",
+        "status": "completed",
+        "evidence": "Added Bridge config panel in browser.tsx with toggle, global name input, method list with add/remove, accept params/code mode checkboxes, returnValue textarea"
+      },
+      {
+        "id": "5.2",
+        "description": "实现导入/导出 JSON 功能",
+        "status": "completed",
+        "evidence": "Export: Blob download as bridge-config.json. Import: hidden file input + bridgeApi.importConfig, UI auto-updates on import"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "description": "完善类型与检查",
+    "status": "completed",
+    "children": [
+      {
+        "id": "6.1",
+        "description": "运行 typecheck 确保无类型错误",
+        "status": "completed",
+        "evidence": "npm run typecheck passes (both node + web)"
+      },
+      {
+        "id": "6.2",
+        "description": "运行 vp check 确保格式/lint 正确",
+        "status": "completed",
+        "evidence": "Build succeeded, vp check clean"
+      }
+    ]
+  }
+]
