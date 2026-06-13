@@ -87,7 +87,15 @@ export class BrowserManager {
     this.state.width = width
     this.state.height = height
     if (this.window && !this.window.isDestroyed()) {
+      // Always lift constraints before resize.
+      // If the window's min/max got stuck (platform-specific Electron quirk),
+      // skipping removeLock because `state.locked` is false would leave the
+      // old constraint in place and silently clamp setSize.
+      this.removeLock()
       this.window.setSize(width, height)
+      if (this.state.locked) {
+        this.applyLock()
+      }
     }
     this.notifyRenderers()
     return this.state
@@ -100,6 +108,10 @@ export class BrowserManager {
         this.applyLock()
       } else {
         this.removeLock()
+        // Explicitly re-assert resizability.
+        // On some platforms removing min/max constraints isn't enough to
+        // re-enable the resize handle – the window needs a nudge.
+        this.window.setResizable(true)
       }
     }
     this.notifyRenderers()

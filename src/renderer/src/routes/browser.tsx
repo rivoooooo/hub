@@ -1,9 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
+import WindowSizeInput from '@renderer/components/WindowSizeInput'
 
 export const Route = createFileRoute('/browser')({
   component: BrowserControl
 })
+
+const inputCls =
+  'font-mono text-[15px] leading-[1.5] py-[10px] px-[12px] border-[3px] border-black bg-surface-sunken text-black outline-none transition-colors duration-[50ms] hover:bg-[#e8e8e8] focus:border-[5px] focus:bg-white'
+
+const btnPrimary =
+  'font-body text-[14px] font-semibold uppercase tracking-[2px] py-[10px] px-[24px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black active:border-[5px] active:bg-black active:text-white'
+
+const btnDanger =
+  'font-body text-[14px] font-semibold uppercase tracking-[2px] py-[10px] px-[24px] border-[3px] border-black bg-error text-white cursor-pointer transition-colors duration-[50ms] hover:bg-black hover:text-error'
 
 function BrowserControl(): React.JSX.Element {
   const [open, setOpen] = useState(false)
@@ -12,7 +22,6 @@ function BrowserControl(): React.JSX.Element {
   const [height, setHeight] = useState(768)
   const [locked, setLocked] = useState(false)
 
-  // Sync state from main process on mount
   useEffect(() => {
     void window.browserApi.getState().then((s) => {
       setOpen(s.open)
@@ -45,9 +54,9 @@ function BrowserControl(): React.JSX.Element {
     void window.browserApi.navigate(url)
   }, [url])
 
-  const handleResize = useCallback(() => {
-    void window.browserApi.resize(width, height)
-  }, [width, height])
+  const handleResize = useCallback((w: number, h: number) => {
+    void window.browserApi.resize(w, h)
+  }, [])
 
   const handleLockChange = useCallback((checked: boolean) => {
     setLocked(checked)
@@ -64,95 +73,103 @@ function BrowserControl(): React.JSX.Element {
   )
 
   return (
-    <div className="browser-control">
-      <h1 className="browser-control-title">Browser Control</h1>
+    <div className="w-full max-w-[520px] mt-[100px] mx-auto p-[24px] border-[3px] border-black bg-white">
+      <h1 className="font-headline text-[32px] leading-[1.1] text-black pb-[24px]">
+        BROWSER CONTROL
+      </h1>
 
       {/* URL */}
-      <div className="form-group">
-        <label className="form-label" htmlFor="browser-url">
+      <div className="pb-[24px]">
+        <label
+          className="block font-headline text-[14px] uppercase tracking-wider text-black pb-[4px]"
+          htmlFor="browser-url"
+        >
           URL
         </label>
-        <div className="form-row">
+        <div className="flex gap-[8px] items-center">
           <input
             id="browser-url"
-            className="form-input"
+            className={`flex-1 ${inputCls}`}
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <button className="btn btn-primary" onClick={handleNavigate}>
-            Navigate
+          <button className={btnPrimary} onClick={handleNavigate}>
+            NAVIGATE
           </button>
         </div>
       </div>
 
       {/* Size */}
-      <div className="form-group">
-        <label className="form-label">Window Size</label>
-        <div className="form-row">
-          <input
-            className="form-input form-input--small"
-            type="number"
-            min={100}
-            max={3840}
-            value={width}
-            onChange={(e) => setWidth(Number(e.target.value))}
-          />
-          <span className="form-separator">×</span>
-          <input
-            className="form-input form-input--small"
-            type="number"
-            min={100}
-            max={2160}
-            value={height}
-            onChange={(e) => setHeight(Number(e.target.value))}
-          />
-          <button className="btn btn-primary" onClick={handleResize}>
-            Apply
-          </button>
-        </div>
+      <div className="pb-[24px]">
+        <label className="block font-headline text-[14px] uppercase tracking-wider text-black pb-[4px]">
+          Window Size
+        </label>
+        <WindowSizeInput
+          width={width}
+          height={height}
+          onWidthChange={setWidth}
+          onHeightChange={setHeight}
+          onApply={handleResize}
+        />
       </div>
 
       {/* Lock */}
-      <div className="form-group">
-        <label className="form-check">
-          <input
-            type="checkbox"
-            checked={locked}
-            onChange={(e) => handleLockChange(e.target.checked)}
-          />
-          <span>Lock window size</span>
+      <div className="pb-[24px]">
+        <label className="flex items-center gap-[8px] cursor-pointer select-none">
+          <span className="relative w-[20px] h-[20px]">
+            <input
+              type="checkbox"
+              className="peer w-[20px] h-[20px] border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms]"
+              checked={locked}
+              onChange={(e) => handleLockChange(e.target.checked)}
+            />
+            {/* White checkmark, 3px stroke — only visible when checked */}
+            <svg
+              className="absolute inset-0 w-[20px] h-[20px] pointer-events-none hidden peer-checked:block"
+              viewBox="0 0 20 20"
+            >
+              <polyline
+                points="5,10 9,14 15,6"
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+              />
+            </svg>
+          </span>
+          <span className="font-body text-[16px] text-black">Lock window size</span>
         </label>
       </div>
 
       {/* Open / Close */}
-      <div className="form-group">
+      <div className="pb-[24px]">
         <button
-          className={`btn btn-block ${open ? 'btn-danger' : 'btn-primary'}`}
+          className={`block w-full ${open ? btnDanger : btnPrimary}`}
           onClick={handleToggleWindow}
         >
-          {open ? 'Close Browser Window' : 'Open Browser Window'}
+          {open ? 'CLOSE BROWSER WINDOW' : 'OPEN BROWSER WINDOW'}
         </button>
       </div>
 
       {/* Status bar */}
-      <div className="status-bar">
-        <div className="status-bar-row">
-          <span className="status-dot" data-open={open ? 'true' : undefined}>
-            ●
+      <div className="pt-[16px] border-t-[3px] border-black">
+        <div className="flex items-center gap-[8px] pb-[8px]">
+          <span
+            className="inline-block w-[12px] h-[12px] border-[3px] border-black bg-black data-[open=true]:bg-success"
+            data-open={open ? 'true' : undefined}
+          />
+          <span className="font-mono text-[15px] text-black font-semibold">
+            {open ? 'ONLINE' : 'OFFLINE'}
           </span>
-          <span className="status-text">{open ? 'Online' : 'Offline'}</span>
         </div>
-        <div className="status-bar-row">
-          <span className="status-label">URL:</span>
-          <span className="status-value">{url}</span>
+        <div className="font-mono text-[15px] leading-[1.5] text-black pb-[4px] break-all">
+          URL: {url}
         </div>
-        <div className="status-bar-row">
-          <span className="status-label">Size:</span>
-          <span className="status-value">
-            {width} × {height}
-          </span>
+        <div className="font-mono text-[15px] leading-[1.5] text-black">
+          Size: {width} × {height}
         </div>
       </div>
     </div>
