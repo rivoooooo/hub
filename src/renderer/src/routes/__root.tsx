@@ -48,14 +48,6 @@ export const Route = createRootRoute({
             {m.nav_browser()}
           </Link>
           <Link
-            to="/about"
-            className={navLink}
-            activeProps={{ className: navLinkActive }}
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
-            {m.nav_about()}
-          </Link>
-          <Link
             to="/settings"
             className={navLink}
             activeProps={{ className: navLinkActive }}

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { m } from '../paraglide/messages.js'
 
 export const Route = createFileRoute('/about')({
@@ -10,9 +10,6 @@ export const Route = createFileRoute('/about')({
       <p className="font-body text-[16px] leading-[1.6] text-black pb-[40px] max-w-[600px]">
         {m.about_description()}
       </p>
-      <Link to="/" className="font-mono text-[15px] text-black underline hover:text-blue">
-        {m.back_to_home()}
-      </Link>
     </div>
   )
 })

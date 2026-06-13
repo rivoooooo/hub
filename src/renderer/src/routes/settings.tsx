@@ -59,9 +59,12 @@ export const Route = createFileRoute('/settings')({
           </div>
         </div>
 
-        <Link to="/" className="font-mono text-[15px] text-black underline hover:text-blue">
-          {m.back_to_home()}
-        </Link>
+        {/* About */}
+        <div className="pt-[48px]">
+          <Link to="/about" className="font-mono text-[15px] text-black underline hover:text-blue">
+            {m.about_title()}
+          </Link>
+        </div>
       </div>
     )
   }

@@ -5,7 +5,31 @@ import icon from '../../resources/icon.png?asset'
 import { BrowserManager } from './browser-manager'
 import * as settings from './settings-store'
 
+// Single instance lock — prevent multiple app instances.
+// On Windows/Linux, clicking the taskbar icon will trigger 'second-instance'
+// instead of launching a duplicate process.
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      // Main window exists — restore and focus it
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    } else if (isReady) {
+      // Main window was closed — re-create it
+      createWindow()
+    }
+    // If not ready yet, the normal startup flow in app.whenReady() will create
+    // the window, so there's nothing to do here.
+  })
+}
+
 let browserManager: BrowserManager | null = null
+let mainWindow: BrowserWindow | null = null
+let isReady = false
 
 function titleBarOptions(): {
   titleBarStyle?: 'hidden' | 'default'
@@ -18,8 +42,15 @@ function titleBarOptions(): {
 }
 
 function createWindow(): void {
+  // If a main window already exists, just restore and focus it.
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+    return
+  }
+
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -33,7 +64,11 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow!.show()
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -114,24 +149,23 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  isReady = true
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (!mainWindow) createWindow()
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Keep the app alive when all windows are closed (like a tray/background app).
+// On all platforms, closing the main window hides it but the app continues
+// running.  The user can re-open it via the Dock / taskbar / launcher icon.
 app.on('window-all-closed', () => {
   if (browserManager) {
     browserManager.close()
   }
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  // Don't quit — stay alive so clicking the launcher can re-create the window.
 })
 
 // In this file you can include the rest of your app's specific main process
