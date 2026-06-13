@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import WindowSizeInput from '@renderer/components/WindowSizeInput'
+import { m } from '../paraglide/messages.js'
 
 export const Route = createFileRoute('/browser')({
   component: BrowserControl
@@ -92,10 +93,16 @@ function BrowserControl(): React.JSX.Element {
     void window.settingsApi.set('toolbarVisible', checked)
   }, [])
 
+  const titleBarLabels: Record<TitleBarMode, string> = {
+    default: m.browser_titlebar_default(),
+    hidden: m.browser_titlebar_hidden(),
+    transparent: m.browser_titlebar_transparent()
+  }
+
   return (
     <div className="w-full max-w-[520px] mt-[100px] mx-auto p-[24px] border-[3px] border-black bg-white">
       <h1 className="font-headline text-[32px] leading-[1.1] text-black pb-[24px]">
-        BROWSER CONTROL
+        {m.browser_title()}
       </h1>
 
       {/* URL */}
@@ -104,7 +111,7 @@ function BrowserControl(): React.JSX.Element {
           className="block font-headline text-[14px] uppercase tracking-wider text-black pb-[4px]"
           htmlFor="browser-url"
         >
-          URL
+          {m.browser_url_label()}
         </label>
         <div className="flex gap-[8px] items-center">
           <input
@@ -116,7 +123,7 @@ function BrowserControl(): React.JSX.Element {
             onKeyDown={handleKeyDown}
           />
           <button className={btnPrimary} onClick={handleNavigate}>
-            NAVIGATE
+            {m.browser_navigate_btn()}
           </button>
         </div>
       </div>
@@ -124,7 +131,7 @@ function BrowserControl(): React.JSX.Element {
       {/* Size */}
       <div className="pb-[24px]">
         <label className="block font-headline text-[14px] uppercase tracking-wider text-black pb-[4px]">
-          Window Size
+          {m.browser_window_size_label()}
         </label>
         <WindowSizeInput
           width={width}
@@ -160,23 +167,18 @@ function BrowserControl(): React.JSX.Element {
               />
             </svg>
           </span>
-          <span className="font-body text-[16px] text-black">Lock window size</span>
+          <span className="font-body text-[16px] text-black">{m.browser_lock_label()}</span>
         </label>
       </div>
 
       {/* Title bar mode */}
       <div className="pb-[24px]">
         <label className="block font-headline text-[14px] uppercase tracking-wider text-black pb-[8px]">
-          Title Bar
+          {m.browser_title_bar_label()}
         </label>
         <div className="flex flex-col gap-[8px]">
           {titleBarModes.map((mode) => {
             const checked = titleBarMode === mode
-            const labels: Record<TitleBarMode, string> = {
-              default: 'Show title bar',
-              hidden: 'Hidden (system UI)',
-              transparent: 'Frameless (immersive)'
-            }
             return (
               <label key={mode} className="flex items-center gap-[8px] cursor-pointer select-none">
                 <span className="relative w-[20px] h-[20px]">
@@ -190,7 +192,7 @@ function BrowserControl(): React.JSX.Element {
                   {/* Inner dot — only visible when checked */}
                   <span className="absolute inset-[5px] rounded-full bg-white pointer-events-none hidden peer-checked:block" />
                 </span>
-                <span className="font-body text-[16px] text-black">{labels[mode]}</span>
+                <span className="font-body text-[16px] text-black">{titleBarLabels[mode]}</span>
               </label>
             )
           })}
@@ -221,10 +223,10 @@ function BrowserControl(): React.JSX.Element {
               />
             </svg>
           </span>
-          <span className="font-body text-[16px] text-black">Show side toolbar</span>
+          <span className="font-body text-[16px] text-black">{m.browser_toolbar_label()}</span>
         </label>
         <p className="font-mono text-[13px] leading-[1.5] text-black opacity-60 pt-[4px]">
-          A separate toolbar panel attaches to the left side of the browser window.
+          {m.browser_toolbar_desc()}
         </p>
       </div>
 
@@ -234,7 +236,7 @@ function BrowserControl(): React.JSX.Element {
           className={`block w-full ${open ? btnDanger : btnPrimary}`}
           onClick={handleToggleWindow}
         >
-          {open ? 'CLOSE BROWSER WINDOW' : 'OPEN BROWSER WINDOW'}
+          {open ? m.browser_close_btn() : m.browser_open_btn()}
         </button>
       </div>
 
@@ -246,14 +248,14 @@ function BrowserControl(): React.JSX.Element {
             data-open={open ? 'true' : undefined}
           />
           <span className="font-mono text-[15px] text-black font-semibold">
-            {open ? 'ONLINE' : 'OFFLINE'}
+            {open ? m.browser_status_online() : m.browser_status_offline()}
           </span>
         </div>
         <div className="font-mono text-[15px] leading-[1.5] text-black pb-[4px] break-all">
-          URL: {url}
+          {m.browser_status_url({ url })}
         </div>
         <div className="font-mono text-[15px] leading-[1.5] text-black">
-          Size: {width} × {height}
+          {m.browser_status_size({ width, height })}
         </div>
       </div>
     </div>

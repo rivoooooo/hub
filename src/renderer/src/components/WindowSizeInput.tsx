@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { m } from '../paraglide/messages.js'
 
 const inputCls =
   'font-mono text-[15px] leading-[1.5] py-[10px] px-[12px] border-[3px] border-black bg-surface-sunken text-black outline-none transition-colors duration-[50ms] hover:bg-[#e8e8e8] focus:border-[5px] focus:bg-white'
@@ -10,13 +11,20 @@ interface Preset {
 }
 
 interface PresetCategory {
-  name: string
+  nameKey: keyof typeof categoryNameFns
   presets: Preset[]
+}
+
+const categoryNameFns = {
+  desktop: () => m.preset_category_desktop(),
+  laptop: () => m.preset_category_laptop(),
+  tablet: () => m.preset_category_tablet(),
+  phone: () => m.preset_category_phone()
 }
 
 const PRESET_CATEGORIES: PresetCategory[] = [
   {
-    name: 'Desktop',
+    nameKey: 'desktop',
     presets: [
       { label: '1080p', width: 1920, height: 1080 },
       { label: '1440p (QHD)', width: 2560, height: 1440 },
@@ -25,7 +33,7 @@ const PRESET_CATEGORIES: PresetCategory[] = [
     ]
   },
   {
-    name: 'Laptop',
+    nameKey: 'laptop',
     presets: [
       { label: 'MacBook 16"', width: 1728, height: 1117 },
       { label: 'MacBook 14"', width: 1512, height: 982 },
@@ -34,7 +42,7 @@ const PRESET_CATEGORIES: PresetCategory[] = [
     ]
   },
   {
-    name: 'Tablet',
+    nameKey: 'tablet',
     presets: [
       { label: 'iPad Landscape', width: 1024, height: 768 },
       { label: 'iPad Portrait', width: 768, height: 1024 },
@@ -42,7 +50,7 @@ const PRESET_CATEGORIES: PresetCategory[] = [
     ]
   },
   {
-    name: 'Phone',
+    nameKey: 'phone',
     presets: [
       { label: 'iPhone 16 Pro Max', width: 440, height: 956 },
       { label: 'iPhone 14/15', width: 390, height: 844 },
@@ -135,22 +143,22 @@ export default function WindowSizeInput({
           onClick={() => setOpen((p) => !p)}
           className="font-body text-[14px] font-semibold uppercase tracking-[2px] py-[10px] px-[24px] border-[3px] border-black bg-white text-black cursor-pointer transition-colors duration-[50ms] hover:bg-black hover:text-white active:border-[5px]"
         >
-          PRESETS
+          {m.window_size_presets()}
         </button>
         <button
           type="button"
           onClick={() => onApply(width, height)}
           className="font-body text-[14px] font-semibold uppercase tracking-[2px] py-[10px] px-[24px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black active:border-[5px] active:bg-black active:text-white"
         >
-          APPLY
+          {m.window_size_apply()}
         </button>
       </div>
 
       {open && (
         <div className="absolute left-0 top-[100%] mt-[0px] z-50 w-full border-[3px] border-black bg-white max-h-[400px] overflow-y-auto">
           {PRESET_CATEGORIES.map((cat) => (
-            <div key={cat.name}>
-              <div className={categoryBase}>{cat.name}</div>
+            <div key={cat.nameKey}>
+              <div className={categoryBase}>{categoryNameFns[cat.nameKey]()}</div>
               <div className="grid grid-cols-2">
                 {cat.presets.map((preset, i) => (
                   <button

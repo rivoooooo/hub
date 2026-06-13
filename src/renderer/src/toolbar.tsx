@@ -3,6 +3,8 @@ import './assets/main.css'
 import React, { StrictMode, type JSX } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Minimize2, Maximize2, X, Bug } from 'lucide-react'
+import { setLocale, localStorageKey } from './paraglide/runtime.js'
+import { m } from './paraglide/messages.js'
 
 const ICON_SIZE = 20
 
@@ -19,6 +21,22 @@ const btnClose = `${btn} bg-black text-white hover:bg-error hover:text-white`
 /** DevTools button. Hover: info fill. */
 const btnDevTools = `${btn} bg-black text-white hover:bg-blue hover:text-white`
 
+/** Read initial locale from localStorage for the toolbar (separate entry point, no React context). */
+function initLocale(): void {
+  try {
+    const stored = localStorage.getItem(localStorageKey)
+    if (stored) {
+      setLocale(stored, { reload: false })
+    }
+  } catch {
+    // ignore localStorage errors — fall back to getLocale() default
+  }
+}
+
+// Prime the locale so message functions return the correct language.
+// The toolbar is a standalone entry point — it must set the locale before any m.*() call.
+initLocale()
+
 export function Toolbar(): JSX.Element {
   return (
     <div className="fixed inset-0 flex flex-col items-center bg-black select-none w-16">
@@ -31,7 +49,7 @@ export function Toolbar(): JSX.Element {
       {/* Minimize */}
       <button
         onClick={() => window.browserControls.minimize()}
-        title="Minimize"
+        title={m.toolbar_minimize()}
         className={btnStandard}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
@@ -41,7 +59,7 @@ export function Toolbar(): JSX.Element {
       {/* Maximize */}
       <button
         onClick={() => window.browserControls.toggleMaximize()}
-        title="Maximize"
+        title={m.toolbar_maximize()}
         className={btnStandard.concat(' mt-1')}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
@@ -51,7 +69,7 @@ export function Toolbar(): JSX.Element {
       {/* Close */}
       <button
         onClick={() => window.browserControls.close()}
-        title="Close"
+        title={m.toolbar_close()}
         className={btnClose.concat(' mt-1')}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
@@ -61,7 +79,7 @@ export function Toolbar(): JSX.Element {
       {/* DevTools */}
       <button
         onClick={() => window.browserControls.openDevTools()}
-        title="Open DevTools"
+        title={m.toolbar_devtools()}
         className={btnDevTools.concat(' mt-1')}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
