@@ -34,6 +34,7 @@ export interface DockFormValues {
 interface DockAppFormModalProps {
   open: boolean
   title: string
+  submitLabel?: string
   initialValues: DockFormValues
   /** Called when the user confirms. Return a promise to keep the UI busy. */
   onSubmit: (values: DockFormValues) => Promise<void>
@@ -52,6 +53,7 @@ const btnPrimary =
 export default function DockAppFormModal({
   open,
   title,
+  submitLabel,
   initialValues,
   onSubmit,
   onClose
@@ -407,7 +409,7 @@ export default function DockAppFormModal({
           onClick={handleSubmit}
           disabled={submitting}
         >
-          {m.dock_install_confirm()}
+          {submitLabel || m.dock_install_confirm()}
         </button>
       </div>
     </div>

@@ -52,6 +52,7 @@ export const Route = createFileRoute('/dock')({
       app: DockApp
     } | null>(null)
     const [editApp, setEditApp] = useState<DockApp | null>(null)
+    const [createMode, setCreateMode] = useState(false)
 
     const loadApps = useCallback(() => {
       void window.dockApi.getAll().then(
@@ -145,32 +146,69 @@ export const Route = createFileRoute('/dock')({
       [editApp, loadApps]
     )
 
-    const editInitialValues = editApp
+    const handleCreateSubmit = useCallback(
+      async (values: DockFormValues) => {
+        await window.dockApi.install(values)
+        setCreateMode(false)
+        loadApps()
+      },
+      [loadApps]
+    )
+
+    const modalOpen = createMode || editApp !== null
+    const modalTitle = createMode ? m.dock_install_modal_title() : m.dock_edit()
+    const modalInitialValues = createMode
       ? {
-          name: editApp.name,
-          iconDataUrl: editApp.iconDataUrl,
-          windowConfig: { ...editApp.windowConfig },
-          userAgent: editApp.userAgent || '',
-          customCss: editApp.customCss || ''
-        }
-      : {
           name: '',
           iconDataUrl: '',
           windowConfig: { width: 1024, height: 768, titleBarStyle: 'hidden' as const, frame: true },
           userAgent: '',
           customCss: ''
         }
+      : editApp
+        ? {
+            name: editApp.name,
+            iconDataUrl: editApp.iconDataUrl,
+            windowConfig: { ...editApp.windowConfig },
+            userAgent: editApp.userAgent || '',
+            customCss: editApp.customCss || ''
+          }
+        : {
+            name: '',
+            iconDataUrl: '',
+            windowConfig: {
+              width: 1024,
+              height: 768,
+              titleBarStyle: 'hidden' as const,
+              frame: true
+            },
+            userAgent: '',
+            customCss: ''
+          }
+    const handleModalClose = useCallback(() => {
+      setCreateMode(false)
+      setEditApp(null)
+    }, [])
+    const handleModalSubmit = createMode ? handleCreateSubmit : handleEditSubmit
 
     return (
       <div className="pt-[100px] px-[24px] pb-[40px] min-h-screen">
         <div className="flex items-center justify-between pb-[24px]">
           <h1 className="font-headline text-[48px] leading-none text-black">{m.dock_title()}</h1>
-          <button
-            className="font-body text-[12px] uppercase tracking-[1px] border-[3px] border-black px-[8px] py-[4px] cursor-pointer hover:bg-black hover:text-white transition-colors duration-[50ms]"
-            onClick={() => navigate({ to: '/' })}
-          >
-            {m.back_to_home()}
-          </button>
+          <div className="flex items-center gap-[8px]">
+            <button
+              className="font-body text-[12px] uppercase tracking-[1px] border-[3px] border-black px-[8px] py-[4px] cursor-pointer hover:bg-black hover:text-white transition-colors duration-[50ms]"
+              onClick={() => setCreateMode(true)}
+            >
+              {m.dock_new()}
+            </button>
+            <button
+              className="font-body text-[12px] uppercase tracking-[1px] border-[3px] border-black px-[8px] py-[4px] cursor-pointer hover:bg-black hover:text-white transition-colors duration-[50ms]"
+              onClick={() => navigate({ to: '/' })}
+            >
+              {m.back_to_home()}
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -248,13 +286,14 @@ export const Route = createFileRoute('/dock')({
           </div>
         )}
 
-        {/* Edit modal */}
+        {/* Create / Edit modal */}
         <DockAppFormModal
-          open={editApp !== null}
-          title={m.dock_edit()}
-          initialValues={editInitialValues}
-          onSubmit={handleEditSubmit}
-          onClose={() => setEditApp(null)}
+          open={modalOpen}
+          title={modalTitle}
+          initialValues={modalInitialValues}
+          onSubmit={handleModalSubmit}
+          onClose={handleModalClose}
+          submitLabel={createMode ? m.dock_install_confirm() : m.dock_save()}
         />
       </div>
     )
