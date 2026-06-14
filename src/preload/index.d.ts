@@ -24,6 +24,7 @@ interface SettingsData {
   proxyEnabled: boolean
   proxyUrl: string
   seoHistoryDir: string
+  defaultUserAgent: string
 }
 
 interface SettingsApi {
@@ -133,6 +134,33 @@ interface SeoApi {
   clearHistory: () => Promise<void>
 }
 
+// --- Dock types ---
+
+interface DockWindowConfig {
+  width: number
+  height: number
+  titleBarStyle: 'default' | 'hidden' | 'none'
+  frame: boolean
+}
+
+interface DockApp {
+  id: string
+  name: string
+  url: string
+  iconDataUrl: string
+  windowConfig: DockWindowConfig
+  userAgent?: string
+  createdAt: number
+}
+
+interface DockApi {
+  getAll: () => Promise<DockApp[]>
+  install: (appData: Omit<DockApp, 'id' | 'createdAt'>) => Promise<DockApp>
+  remove: (id: string) => Promise<boolean>
+  update: (id: string, patch: Partial<DockApp>) => Promise<DockApp>
+  launch: (id: string) => Promise<void>
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -144,6 +172,7 @@ declare global {
     settingsApi: SettingsApi
     browserControls: BrowserControls
     seoApi: SeoApi
+    dockApi: DockApi
     /** Bridge IPC channel — used by injected Proxy bridge on target pages */
     __bridgeCall: BridgeCallChannel
   }

@@ -55,6 +55,14 @@ export const Route = createRootRoute({
           >
             {m.nav_settings()}
           </Link>
+          <Link
+            to="/dock"
+            className={navLink}
+            activeProps={{ className: navLinkActive }}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            {m.nav_dock()}
+          </Link>
           <div className="flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
         </nav>
         <Outlet />

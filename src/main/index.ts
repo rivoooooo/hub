@@ -6,6 +6,8 @@ import { BrowserManager } from './browser-manager'
 import * as settings from './settings-store'
 import * as bridgeStore from './bridge-store'
 import { registerSeoHandlers } from './seo'
+import { DockWindowManager } from './dock-window-manager'
+import * as appsStore from './apps-store'
 
 // Single instance lock — prevent multiple app instances.
 // On Windows/Linux, clicking the taskbar icon will trigger 'second-instance'
@@ -30,6 +32,7 @@ if (!gotSingleInstanceLock) {
 }
 
 let browserManager: BrowserManager | null = null
+let dockWindowManager: DockWindowManager | null = null
 let mainWindow: BrowserWindow | null = null
 let isReady = false
 
@@ -333,6 +336,32 @@ app.whenReady().then(() => {
   // SEO analysis
   registerSeoHandlers()
 
+  // --------------------------------------------------
+  // Dock (App Center)
+  // --------------------------------------------------
+  dockWindowManager = new DockWindowManager()
+
+  ipcMain.handle('dock:get-apps', () => appsStore.getAll())
+
+  ipcMain.handle(
+    'dock:install-app',
+    (_event, appData: Omit<appsStore.DockApp, 'id' | 'createdAt'>) => appsStore.add(appData)
+  )
+
+  ipcMain.handle('dock:uninstall-app', (_event, id: string) => appsStore.remove(id))
+
+  ipcMain.handle('dock:update-app', (_event, id: string, patch: Partial<appsStore.DockApp>) => {
+    const updated = appsStore.update(id, patch)
+    if (!updated) throw new Error(`App ${id} not found`)
+    return updated
+  })
+
+  ipcMain.handle('dock:launch-app', (_event, id: string) => {
+    const app = appsStore.get(id)
+    if (!app) throw new Error(`App ${id} not found`)
+    dockWindowManager!.launch(app)
+  })
+
   createWindow()
   isReady = true
 
@@ -351,6 +380,13 @@ app.on('window-all-closed', () => {
     browserManager.close()
   }
   // Don't quit — stay alive so clicking the launcher can re-create the window.
+})
+
+// Clean up dock windows when the app is about to quit
+app.on('will-quit', () => {
+  if (dockWindowManager) {
+    dockWindowManager.closeAll()
+  }
 })
 
 // In this file you can include the rest of your app's specific main process

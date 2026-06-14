@@ -5,7 +5,7 @@ import { m } from '../paraglide/messages.js'
 export const Route = createFileRoute('/')({
   component: function Dashboard(): React.JSX.Element {
     return (
-      <div className="pt-[120px] px-[24px]">
+      <div className="pt-[120px] px-[24px] pb-[180px] h-screen overflow-y-auto">
         <h1 className="font-headline text-[64px] leading-none text-black pb-[8px]">
           {m.home_title()}
         </h1>
@@ -40,6 +40,18 @@ export const Route = createFileRoute('/')({
             </span>
             <span className="block font-mono text-[13px] leading-[1.5] opacity-60">
               {m.seo_card_desc()}
+            </span>
+          </Link>
+          <Link
+            to="/dock"
+            className="group block w-[280px] p-[24px] border-[3px] border-black bg-white text-black transition-colors duration-[50ms] hover:bg-black hover:text-white"
+          >
+            <span className="block font-headline text-[12px] uppercase tracking-[3px] text-black group-hover:text-white pb-[8px]">
+              {m.home_module_label()}
+            </span>
+            <span className="block font-headline text-[32px] leading-[1.1] pb-[8px]">APP DOCK</span>
+            <span className="block font-mono text-[13px] leading-[1.5] opacity-60">
+              {m.dock_card_desc()}
             </span>
           </Link>
         </div>

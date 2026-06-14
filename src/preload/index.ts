@@ -113,6 +113,37 @@ const seoApi = {
   clearHistory: (): Promise<void> => ipcRenderer.invoke('seo:clear-history')
 }
 
+// ---------------------------------------------------------------------------
+// Dock API
+// ---------------------------------------------------------------------------
+
+interface DockWindowConfig {
+  width: number
+  height: number
+  titleBarStyle: 'default' | 'hidden' | 'none'
+  frame: boolean
+}
+
+interface DockApp {
+  id: string
+  name: string
+  url: string
+  iconDataUrl: string
+  windowConfig: DockWindowConfig
+  userAgent?: string
+  createdAt: number
+}
+
+const dockApi = {
+  getAll: (): Promise<DockApp[]> => ipcRenderer.invoke('dock:get-apps'),
+  install: (appData: Omit<DockApp, 'id' | 'createdAt'>): Promise<DockApp> =>
+    ipcRenderer.invoke('dock:install-app', appData),
+  remove: (id: string): Promise<boolean> => ipcRenderer.invoke('dock:uninstall-app', id),
+  update: (id: string, patch: Partial<DockApp>): Promise<DockApp> =>
+    ipcRenderer.invoke('dock:update-app', id, patch),
+  launch: (id: string): Promise<void> => ipcRenderer.invoke('dock:launch-app', id)
+}
+
 // Inline copy of HistoryEntry
 interface HistoryEntry {
   id: string
@@ -159,6 +190,7 @@ interface SettingsData {
   proxyEnabled: boolean
   proxyUrl: string
   seoHistoryDir: string
+  defaultUserAgent: string
 }
 
 // ---------------------------------------------------------------------------
@@ -174,6 +206,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('settingsApi', settingsApi)
     contextBridge.exposeInMainWorld('browserControls', browserControls)
     contextBridge.exposeInMainWorld('seoApi', seoApi)
+    contextBridge.exposeInMainWorld('dockApi', dockApi)
 
     // Bridge IPC channel — used by injected Proxy bridge on target pages
     contextBridge.exposeInMainWorld('__bridgeCall', {
@@ -198,6 +231,8 @@ if (process.contextIsolated) {
   window.browserControls = browserControls
   // @ts-expect-error (define in dts)
   window.seoApi = seoApi
+  // @ts-expect-error (define in dts)
+  window.dockApi = dockApi
   // @ts-expect-error (define in dts)
   window.__bridgeCall = {
     call: (path: string[], ...args: unknown[]): Promise<unknown> =>

@@ -1,0 +1,250 @@
+import { useCallback, useEffect, useState } from 'react'
+import { m } from '../paraglide/messages.js'
+
+// ---------------------------------------------------------------------------
+// Types (kept in sync with preload/index.d.ts)
+// ---------------------------------------------------------------------------
+
+export interface DockWindowConfig {
+  width: number
+  height: number
+  titleBarStyle: 'default' | 'hidden' | 'none'
+  frame: boolean
+}
+
+export interface DockApp {
+  id: string
+  name: string
+  url: string
+  iconDataUrl: string
+  windowConfig: DockWindowConfig
+  userAgent?: string
+  createdAt: number
+}
+
+export interface DockFormValues {
+  name: string
+  iconDataUrl: string
+  windowConfig: DockWindowConfig
+  userAgent: string
+}
+
+interface DockAppFormModalProps {
+  open: boolean
+  title: string
+  initialValues: DockFormValues
+  /** Called when the user confirms. Return a promise to keep the UI busy. */
+  onSubmit: (values: DockFormValues) => Promise<void>
+  onClose: () => void
+}
+
+const inputCls =
+  'font-body text-[15px] border-[3px] border-black px-[8px] py-[6px] bg-white text-black outline-none focus:border-[5px] transition-all duration-[50ms]'
+
+const btnSmall =
+  'font-body text-[13px] font-semibold uppercase tracking-[1px] border-[3px] border-black px-[8px] py-[6px] cursor-pointer transition-colors duration-[50ms]'
+
+const btnPrimary =
+  'font-body text-[14px] font-semibold uppercase tracking-[2px] border-[3px] border-black bg-black text-white px-[16px] py-[10px] cursor-pointer hover:bg-white hover:text-black transition-colors duration-[50ms] active:border-[5px]'
+
+export default function DockAppFormModal({
+  open,
+  title,
+  initialValues,
+  onSubmit,
+  onClose
+}: DockAppFormModalProps): React.JSX.Element | null {
+  const [name, setName] = useState(initialValues.name)
+  const [iconUrl, setIconUrl] = useState(initialValues.iconDataUrl)
+  const [width, setWidth] = useState(initialValues.windowConfig.width)
+  const [height, setHeight] = useState(initialValues.windowConfig.height)
+  const [titleBarStyle, setTitleBarStyle] = useState(initialValues.windowConfig.titleBarStyle)
+  const [frame, setFrame] = useState(initialValues.windowConfig.frame)
+  const [userAgent, setUserAgent] = useState(initialValues.userAgent)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Sync form when initialValues change (e.g. editing a different app)
+  useEffect(() => {
+    setName(initialValues.name)
+    setIconUrl(initialValues.iconDataUrl)
+    setWidth(initialValues.windowConfig.width)
+    setHeight(initialValues.windowConfig.height)
+    setTitleBarStyle(initialValues.windowConfig.titleBarStyle)
+    setFrame(initialValues.windowConfig.frame)
+    setUserAgent(initialValues.userAgent)
+  }, [initialValues])
+
+  const handleSubmit = useCallback(() => {
+    setSubmitting(true)
+    void onSubmit({
+      name,
+      iconDataUrl: iconUrl,
+      windowConfig: { width, height, titleBarStyle, frame },
+      userAgent
+    }).finally(() => setSubmitting(false))
+  }, [name, iconUrl, width, height, titleBarStyle, frame, userAgent, onSubmit])
+
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-200 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white border-[3px] border-black p-[24px] w-[480px] max-w-[92vw] max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between pb-[16px]">
+          <span className="font-headline text-[14px] uppercase tracking-wider text-black">
+            {title}
+          </span>
+          <button
+            className="font-body text-[20px] leading-none border-[3px] border-black w-[32px] h-[32px] flex items-center justify-center cursor-pointer hover:bg-black hover:text-white transition-colors duration-[50ms]"
+            onClick={onClose}
+            disabled={submitting}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* App Name */}
+        <div className="pb-[12px]">
+          <label className="block font-headline text-[12px] uppercase tracking-wider text-black pb-[4px]">
+            {m.dock_install_name()}
+          </label>
+          <input
+            className={`w-full ${inputCls}`}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="My App"
+            disabled={submitting}
+          />
+        </div>
+
+        {/* Icon URL */}
+        <div className="pb-[12px]">
+          <label className="block font-headline text-[12px] uppercase tracking-wider text-black pb-[4px]">
+            {m.dock_install_icon()}
+          </label>
+          <input
+            className={`w-full ${inputCls}`}
+            type="text"
+            value={iconUrl}
+            onChange={(e) => setIconUrl(e.target.value)}
+            placeholder="https://example.com/favicon.ico"
+            disabled={submitting}
+          />
+        </div>
+
+        {/* User-Agent */}
+        <div className="pb-[12px]">
+          <label className="block font-headline text-[12px] uppercase tracking-wider text-black pb-[4px]">
+            {m.dock_install_user_agent()}
+          </label>
+          <input
+            className={`w-full ${inputCls}`}
+            type="text"
+            value={userAgent}
+            onChange={(e) => setUserAgent(e.target.value)}
+            placeholder="Mozilla/5.0 ..."
+            disabled={submitting}
+          />
+        </div>
+
+        {/* Window Size */}
+        <div className="pb-[12px]">
+          <label className="block font-headline text-[12px] uppercase tracking-wider text-black pb-[4px]">
+            {m.dock_install_window_size()}
+          </label>
+          <div className="flex gap-[8px]">
+            <input
+              className={`flex-1 ${inputCls}`}
+              type="number"
+              min={400}
+              max={3840}
+              value={width}
+              onChange={(e) => setWidth(Number(e.target.value))}
+              placeholder="Width"
+              disabled={submitting}
+            />
+            <span className="self-center font-mono text-[15px]">×</span>
+            <input
+              className={`flex-1 ${inputCls}`}
+              type="number"
+              min={300}
+              max={2160}
+              value={height}
+              onChange={(e) => setHeight(Number(e.target.value))}
+              placeholder="Height"
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        {/* Title Bar Style */}
+        <div className="pb-[12px]">
+          <label className="block font-headline text-[12px] uppercase tracking-wider text-black pb-[4px]">
+            {m.dock_install_titlebar()}
+          </label>
+          <div className="flex gap-[8px]">
+            {(['default', 'hidden', 'none'] as const).map((style) => (
+              <button
+                key={style}
+                className={`flex-1 ${btnSmall} ${titleBarStyle === style ? 'bg-black text-white' : 'bg-white text-black hover:bg-black hover:text-white'}`}
+                onClick={() => setTitleBarStyle(style)}
+                disabled={submitting}
+              >
+                {style === 'default'
+                  ? m.dock_install_titlebar_default()
+                  : style === 'hidden'
+                    ? m.dock_install_titlebar_hidden()
+                    : m.dock_install_titlebar_none()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Frame toggle */}
+        <div className="pb-[20px]">
+          <label className="flex items-center gap-[8px] cursor-pointer select-none">
+            <span className="relative w-[20px] h-[20px]">
+              <input
+                type="checkbox"
+                className="peer w-[20px] h-[20px] border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms]"
+                checked={frame}
+                onChange={(e) => setFrame(e.target.checked)}
+                disabled={submitting}
+              />
+              <svg
+                className="absolute inset-0 w-[20px] h-[20px] pointer-events-none hidden peer-checked:block"
+                viewBox="0 0 20 20"
+              >
+                <polyline
+                  points="5,10 9,14 15,6"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="square"
+                  strokeLinejoin="miter"
+                />
+              </svg>
+            </span>
+            <span className="font-body text-[14px] text-black">{m.dock_install_frame()}</span>
+          </label>
+        </div>
+
+        {/* Submit button */}
+        <button
+          className={`w-full ${btnPrimary} ${submitting ? 'opacity-50 pointer-events-none' : ''}`}
+          onClick={handleSubmit}
+          disabled={submitting}
+        >
+          {m.dock_install_confirm()}
+        </button>
+      </div>
+    </div>
+  )
+}

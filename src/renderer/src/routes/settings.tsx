@@ -31,6 +31,7 @@ export const Route = createFileRoute('/settings')({
     const [proxyEnabled, setProxyEnabled] = useState(false)
     const [proxyUrl, setProxyUrl] = useState('')
     const [seoHistoryDir, setSeoHistoryDir] = useState('')
+    const [defaultUserAgent, setDefaultUserAgent] = useState('')
     const [loaded, setLoaded] = useState(false)
     const proxyUrlRef = useRef<HTMLInputElement>(null)
     const seoHistoryDirRef = useRef<HTMLInputElement>(null)
@@ -41,6 +42,7 @@ export const Route = createFileRoute('/settings')({
         setProxyEnabled(s.proxyEnabled)
         setProxyUrl(s.proxyUrl)
         setSeoHistoryDir(s.seoHistoryDir)
+        setDefaultUserAgent(s.defaultUserAgent)
         setLoaded(true)
       })
     }, [])
@@ -72,6 +74,15 @@ export const Route = createFileRoute('/settings')({
         const val = e.target.value
         setSeoHistoryDir(val)
         updateSetting('seoHistoryDir', val)
+      },
+      [updateSetting]
+    )
+
+    const handleDefaultUserAgentChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value
+        setDefaultUserAgent(val)
+        updateSetting('defaultUserAgent', val)
       },
       [updateSetting]
     )
@@ -190,6 +201,31 @@ export const Route = createFileRoute('/settings')({
               />
               <p className="font-mono text-[12px] leading-[1.5] text-black/50 pt-[4px]">
                 {m.settings_data_dir_hint()}
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* Default User-Agent */}
+        <section className="pb-[40px]">
+          <h2 className="font-headline text-[12px] uppercase tracking-[3px] text-black pb-[16px] border-b-[3px] border-black mb-[16px]">
+            {m.settings_default_ua_label()}
+          </h2>
+          {loaded && (
+            <div>
+              <label htmlFor="settings-default-ua" className={labelCls}>
+                {m.settings_default_ua_label()}
+              </label>
+              <input
+                id="settings-default-ua"
+                type="text"
+                className={`max-w-[420px] ${inputCls}`}
+                placeholder="Mozilla/5.0 ..."
+                value={defaultUserAgent}
+                onChange={handleDefaultUserAgentChange}
+              />
+              <p className="font-mono text-[12px] leading-[1.5] text-black/50 pt-[4px]">
+                {m.settings_default_ua_hint()}
               </p>
             </div>
           )}

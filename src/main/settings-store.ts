@@ -12,6 +12,7 @@ export interface SettingsData {
   proxyEnabled: boolean
   proxyUrl: string
   seoHistoryDir: string
+  defaultUserAgent: string
 }
 
 const DEFAULTS: SettingsData = {
@@ -19,7 +20,8 @@ const DEFAULTS: SettingsData = {
   toolbarVisible: false,
   proxyEnabled: false,
   proxyUrl: '',
-  seoHistoryDir: ''
+  seoHistoryDir: '',
+  defaultUserAgent: ''
 }
 
 let cache: SettingsData | null = null

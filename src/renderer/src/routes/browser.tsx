@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import WindowSizeInput from '@renderer/components/WindowSizeInput'
+import DockAppFormModal, { type DockFormValues } from '@renderer/components/DockAppFormModal'
 import { m } from '../paraglide/messages.js'
 
 // ---------------------------------------------------------------------------
@@ -725,6 +726,40 @@ function BrowserControl(): React.JSX.Element {
     e.target.value = ''
   }, [])
 
+  // --------------------------------------------------
+  // Dock install modal
+  // --------------------------------------------------
+  // ── Install to DOCK modal ──
+  const [showInstallModal, setShowInstallModal] = useState(false)
+  const installInitialValues = useMemo<DockFormValues>(
+    () => ({
+      name: url.replace(/^https?:\/\//, '').split('/')[0] || url,
+      iconDataUrl: '',
+      windowConfig: {
+        width,
+        height,
+        titleBarStyle: 'hidden',
+        frame: true
+      },
+      userAgent: ''
+    }),
+    [url, width, height]
+  )
+
+  const handleInstallSubmit = useCallback(
+    async (values: DockFormValues) => {
+      await window.dockApi.install({
+        name: values.name || url,
+        url,
+        iconDataUrl: values.iconDataUrl || '',
+        windowConfig: values.windowConfig,
+        userAgent: values.userAgent || undefined
+      })
+      setShowInstallModal(false)
+    },
+    [url]
+  )
+
   const titleBarLabels: Record<TitleBarMode, string> = {
     default: m.browser_titlebar_default(),
     hidden: m.browser_titlebar_hidden(),
@@ -763,6 +798,13 @@ function BrowserControl(): React.JSX.Element {
             />
             <button className={btnPrimary} onClick={handleNavigate}>
               {m.browser_navigate_btn()}
+            </button>
+            <button
+              className={`${btnPrimary} text-[12px]`}
+              onClick={() => setShowInstallModal(true)}
+              title={m.dock_install_modal_title()}
+            >
+              {m.dock_install_btn()}
             </button>
           </div>
         </div>
@@ -1043,6 +1085,14 @@ function BrowserControl(): React.JSX.Element {
           </div>
         </div>
       )}
+
+      <DockAppFormModal
+        open={showInstallModal}
+        title={m.dock_install_modal_title()}
+        initialValues={installInitialValues}
+        onSubmit={handleInstallSubmit}
+        onClose={() => setShowInstallModal(false)}
+      />
     </div>
   )
 }
