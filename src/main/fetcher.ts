@@ -48,6 +48,12 @@ export async function fetchText(url: string, opts?: FetchTextOptions): Promise<F
     }
   }
 
+  if (proxyUrl) {
+    console.log(`[fetcher] Using proxy: ${proxyUrl} → ${url}`)
+  } else {
+    console.log(`[fetcher] Direct request (no proxy): ${url}`)
+  }
+
   return new Promise<FetchTextResult>((resolve, reject) => {
     const parsed = new URL(url)
     const mod = parsed.protocol === 'https:' ? https : http
