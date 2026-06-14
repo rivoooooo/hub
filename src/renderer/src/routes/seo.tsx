@@ -184,7 +184,27 @@ function SeoResults({ result }: { result: SeoResult }): React.JSX.Element {
         <MetaRow label="Robots" value={result.metaRobots} />
         <MetaRow label="Canonical" value={result.canonical} />
         <MetaRow label="HTML Lang" value={result.htmlLang} />
-        <MetaRow label="Favicon" value={result.favicon} />
+        {/* Favicon — show icon image + URL */}
+        <div className="flex gap-[12px] py-[6px] border-b-[1px] border-black/10 items-center">
+          <span className="font-headline text-[11px] uppercase tracking-[1px] text-black/50 w-[140px] shrink-0 leading-[1.6]">
+            Favicon
+          </span>
+          {result.favicon ? (
+            <>
+              <img
+                src={result.favicon}
+                alt="favicon"
+                className="w-[20px] h-[20px] border-[1px] border-black/20 shrink-0"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
+              <span className={`${valueCls}`}>{result.favicon}</span>
+            </>
+          ) : (
+            <span className={`${valueCls} text-black/30 italic`}>—</span>
+          )}
+        </div>
       </section>
 
       {/* Headings */}
