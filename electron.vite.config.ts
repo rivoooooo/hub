@@ -6,7 +6,12 @@ import tailwindcss from '@tailwindcss/vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 
 export default defineConfig({
-  main: {},
+  main: {
+    build: {
+      // Don't wipe out/main/ — app-runner.js is placed there by a separate build step
+      emptyOutDir: false
+    }
+  },
   preload: {
     build: {
       rollupOptions: {

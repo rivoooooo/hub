@@ -9,6 +9,12 @@ import { registerSeoHandlers } from './seo'
 import { DockWindowManager } from './dock-window-manager'
 import * as appsStore from './apps-store'
 
+// If this is an app-runner child process, exit immediately —
+// the app-runner entry point handles that case separately.
+if (process.argv.includes('--app-runner')) {
+  process.exit(0)
+}
+
 // Single instance lock — prevent multiple app instances.
 // On Windows/Linux, clicking the taskbar icon will trigger 'second-instance'
 // instead of launching a duplicate process.
@@ -360,6 +366,21 @@ app.whenReady().then(() => {
     const app = appsStore.get(id)
     if (!app) throw new Error(`App ${id} not found`)
     dockWindowManager!.launch(app)
+  })
+
+  // Dock running-state queries
+  ipcMain.handle('dock:get-running-apps', () => dockWindowManager!.getRunningIds())
+
+  ipcMain.handle('dock:close-app', (_event, id: string) => {
+    dockWindowManager!.close(id)
+  })
+
+  // Forward running-state changes to all renderer windows
+  dockWindowManager.onStateChange((runningIds) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed()) continue
+      win.webContents.send('dock:running-state-changed', runningIds)
+    }
   })
 
   createWindow()

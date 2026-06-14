@@ -108,5 +108,8 @@
   "dock_install_css_windows": "Windows (.is-windows)",
   "dock_install_css_linux": "Linux (.is-linux)",
   "dock_install_confirm": "INSTALL",
+  "dock_running": "Running",
+  "dock_stopped": "Stopped",
+  "dock_stop": "Stop",
   "dock_card_desc": "Manage your installed PWA-style desktop apps"
 }

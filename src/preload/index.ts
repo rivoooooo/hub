@@ -142,7 +142,14 @@ const dockApi = {
   remove: (id: string): Promise<boolean> => ipcRenderer.invoke('dock:uninstall-app', id),
   update: (id: string, patch: Partial<DockApp>): Promise<DockApp> =>
     ipcRenderer.invoke('dock:update-app', id, patch),
-  launch: (id: string): Promise<void> => ipcRenderer.invoke('dock:launch-app', id)
+  launch: (id: string): Promise<void> => ipcRenderer.invoke('dock:launch-app', id),
+  getRunning: (): Promise<string[]> => ipcRenderer.invoke('dock:get-running-apps'),
+  closeApp: (id: string): Promise<void> => ipcRenderer.invoke('dock:close-app', id),
+  onRunningStateChange: (callback: (ids: string[]) => void): (() => void) => {
+    const handler = (_event: unknown, ids: string[]): void => callback(ids)
+    ipcRenderer.on('dock:running-state-changed', handler)
+    return () => ipcRenderer.removeListener('dock:running-state-changed', handler)
+  }
 }
 
 // Inline copy of HistoryEntry

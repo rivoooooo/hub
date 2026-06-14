@@ -1,116 +1,44 @@
-[
-  {
-    "id": 1,
-    "description": "构建 Bridge 配置模型与持久化层",
-    "status": "completed",
-    "children": [
-      {
-        "id": "1.1",
-        "description": "在 src/main/ 下新建 bridge-store.ts，定义 BridgeConfig/BridgeMethod 接口及默认配置",
-        "status": "completed",
-        "evidence": "Created src/main/bridge-store.ts with BridgeConfig/BridgeMethod interfaces, default config, getConfig/setConfig/exportConfig/importConfig methods, persisted to userData/bridge-config.json"
-      },
-      {
-        "id": "1.2",
-        "description": "实现 getConfig/setConfig/exportConfig/importConfig 方法，持久化到 JSON",
-        "status": "completed",
-        "evidence": "All methods implemented in bridge-store.ts"
-      }
-    ]
-  },
-  {
-    "id": 2,
-    "description": "创建 Bridge preload 脚本用于注入目标页面（改用 executeJavaScript 方式）",
-    "status": "completed",
-    "children": [
-      {
-        "id": "2.1",
-        "description": "在 browser-manager.ts 中实现 injectBridge() 方法",
-        "status": "completed",
-        "evidence": "Implemented injectBridge() using webContents.executeJavaScript() — builds dynamic bridge object from config"
-      },
-      {
-        "id": "2.2",
-        "description": "在 did-finish-load 事件中自动注入 bridge",
-        "status": "completed",
-        "evidence": "Added did-finish-load listeners in open() for both toolbar and non-toolbar modes"
-      }
-    ]
-  },
-  {
-    "id": 3,
-    "description": "更新 BrowserManager 启用 Bridge 注入",
-    "status": "completed",
-    "children": [
-      {
-        "id": "3.1",
-        "description": "在 open() 中移除 preload 注入逻辑，保留 sandbox: true",
-        "status": "completed",
-        "evidence": "Reverted WebContentsView and BrowserWindow to original sandbox: true config, removed BridgeManager.getBridgePreload()"
-      },
-      {
-        "id": "3.2",
-        "description": "实现 refreshBridge() 重新注入 bridge",
-        "status": "completed",
-        "evidence": "refreshBridge() now calls injectBridge() again — no page reload needed"
-      }
-    ]
-  },
-  {
-    "id": 4,
-    "description": "新增 Bridge IPC 通道与主进程 API",
-    "status": "completed",
-    "children": [
-      {
-        "id": "4.1",
-        "description": "在 src/main/index.ts 注册 bridge IPC handlers",
-        "status": "completed",
-        "evidence": "Registered async handlers bridge:get-config/set-config/export-config/import-config. Removed unused sync handler."
-      },
-      {
-        "id": "4.2",
-        "description": "在 preload/index.ts 暴露 bridgeApi 并更新类型声明",
-        "status": "completed",
-        "evidence": "Added bridgeApi with getConfig/setConfig/exportConfig/importConfig, exposed via contextBridge, updated index.d.ts types"
-      }
-    ]
-  },
-  {
-    "id": 5,
-    "description": "Browser 页面新增 Bridge 配置 UI",
-    "status": "completed",
-    "children": [
-      {
-        "id": "5.1",
-        "description": "在 browser.tsx 中新增 Bridge 配置面板（开关、globalName、方法列表）",
-        "status": "completed",
-        "evidence": "Added Bridge config panel in browser.tsx with toggle, global name input, method list with add/remove, accept params/code mode checkboxes, returnValue textarea"
-      },
-      {
-        "id": "5.2",
-        "description": "实现导入/导出 JSON 功能",
-        "status": "completed",
-        "evidence": "Export: Blob download as bridge-config.json. Import: hidden file input + bridgeApi.importConfig, UI auto-updates on import"
-      }
-    ]
-  },
-  {
-    "id": 6,
-    "description": "完善类型与检查",
-    "status": "completed",
-    "children": [
-      {
-        "id": "6.1",
-        "description": "运行 typecheck 确保无类型错误",
-        "status": "completed",
-        "evidence": "npm run typecheck passes (both node + web)"
-      },
-      {
-        "id": "6.2",
-        "description": "运行 vp check 确保格式/lint 正确",
-        "status": "completed",
-        "evidence": "Build succeeded, vp check clean"
-      }
-    ]
-  }
-]
+{
+  "phases": [
+    {
+      "title": "1. ✅ 修复启动闪退 — app-runner.js 找不到问题",
+      "steps": [
+        "根因：electron-vite build/dev 默认 emptyOutDir: true，会清空 out/main/ 目录，删除 app-runner.js",
+        "electron.vite.config.ts ← 添加 main.build.emptyOutDir: false，防止构建时擦除同级文件",
+        "src/main/index.ts ← 添加 --app-runner 守卫，子进程加载时立即退出（防御性）",
+        "创建 build-app-runner.js ← 使用 tsc 单独编译 app-runner 入口到 out/main/app-runner.js",
+        "package.json ← 更新 dev/build/build:mac/build:linux 脚本集成 app-runner 构建步骤",
+        "清理 build-app-runner.mjs（Vite 方案，未采用）"
+      ]
+    },
+    {
+      "title": "2. ✅ 重写 DockWindowManager 以管理子进程",
+      "steps": [
+        "重写 src/main/dock-window-manager.ts — 使用 child_process.spawn 替代 new BrowserWindow()",
+        "更新 src/main/index.ts — 添加 IPC 处理程序 dock:get-running-apps / dock:close-app / 状态变更转发"
+      ]
+    },
+    {
+      "title": "3. ✅ 运行器与主进程之间的生命周期通信",
+      "steps": [
+        "在 app-runner 中通过 stdout 发送 JSON 行消息（ready/closed）",
+        "在主进程 DockWindowManager 中监听子进程事件维护运行状态",
+        "更新 preload/index.ts 和 index.d.ts 添加新 API"
+      ]
+    },
+    {
+      "title": "4. ✅ 更新渲染进程 UI",
+      "steps": [
+        "更新 src/renderer/src/routes/dock.tsx — 显示运行状态和关闭操作",
+        "添加 i18n 消息（dock_running, dock_stopped, dock_stop）中英文"
+      ]
+    },
+    {
+      "title": "5. ✅ 图标与 OS 特定优化",
+      "steps": [
+        "在 app-runner 中设置 BrowserWindow 的 icon 选项",
+        "macOS/Windows/Linux 任务栏/dock 独立性增强"
+      ]
+    }
+  ]
+}

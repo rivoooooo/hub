@@ -8,6 +8,7 @@ export const Route = createFileRoute('/dock')({
     const navigate = useNavigate()
     const [apps, setApps] = useState<DockApp[]>([])
     const [loading, setLoading] = useState(true)
+    const [runningIds, setRunningIds] = useState<string[]>([])
     const [contextMenu, setContextMenu] = useState<{
       x: number
       y: number
@@ -25,9 +26,22 @@ export const Route = createFileRoute('/dock')({
       )
     }, [])
 
+    const loadRunning = useCallback(() => {
+      void window.dockApi.getRunning().then(setRunningIds, () => {})
+    }, [])
+
     useEffect(() => {
       loadApps()
-    }, [loadApps])
+      loadRunning()
+    }, [loadApps, loadRunning])
+
+    // Subscribe to running-state changes from the main process
+    useEffect(() => {
+      const unsub = window.dockApi.onRunningStateChange((ids) => {
+        setRunningIds(ids)
+      })
+      return unsub
+    }, [])
 
     // Close context menu on any click
     useEffect(() => {
@@ -39,7 +53,17 @@ export const Route = createFileRoute('/dock')({
 
     const handleLaunch = useCallback((app: DockApp) => {
       void window.dockApi.launch(app.id)
+      // Optimistically mark as running — the IPC will confirm via state change
+      setRunningIds((prev) => (prev.includes(app.id) ? prev : [...prev, app.id]))
     }, [])
+
+    const handleStop = useCallback(() => {
+      if (!contextMenu) return
+      void window.dockApi.closeApp(contextMenu.app.id).then(() => {
+        setContextMenu(null)
+        loadRunning()
+      }, console.error)
+    }, [contextMenu, loadRunning])
 
     const handleContextMenu = useCallback((e: React.MouseEvent, app: DockApp) => {
       e.preventDefault()
@@ -49,11 +73,18 @@ export const Route = createFileRoute('/dock')({
 
     const handleUninstall = useCallback(() => {
       if (!contextMenu) return
-      void window.dockApi.remove(contextMenu.app.id).then(() => {
-        setContextMenu(null)
-        loadApps()
-      }, console.error)
-    }, [contextMenu, loadApps])
+      // Stop the app before uninstalling
+      void window.dockApi
+        .closeApp(contextMenu.app.id)
+        .then(() => {
+          return window.dockApi.remove(contextMenu.app.id)
+        })
+        .then(() => {
+          setContextMenu(null)
+          loadApps()
+          loadRunning()
+        }, console.error)
+    }, [contextMenu, loadApps, loadRunning])
 
     const handleEdit = useCallback(() => {
       if (!contextMenu) return
@@ -105,36 +136,64 @@ export const Route = createFileRoute('/dock')({
           <div className="font-mono text-[15px] text-black opacity-60">{m.dock_empty()}</div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-[16px]">
-            {apps.map((app) => (
-              <div
-                key={app.id}
-                className="flex flex-col items-center gap-[8px] p-[16px] border-[3px] border-black bg-white cursor-pointer transition-colors duration-[50ms] hover:bg-black hover:text-white group"
-                onClick={() => handleLaunch(app)}
-                onContextMenu={(e) => handleContextMenu(e, app)}
-              >
-                {/* Icon */}
-                <div className="w-[64px] h-[64px] flex items-center justify-center overflow-hidden">
-                  {app.iconDataUrl ? (
-                    <img
-                      src={app.iconDataUrl}
-                      alt={app.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-black flex items-center justify-center">
-                      <span className="text-white font-headline text-[24px] uppercase">
-                        {app.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                </div>
+            {apps.map((app) => {
+              const isRunning = runningIds.includes(app.id)
+              return (
+                <div
+                  key={app.id}
+                  className={
+                    'flex flex-col items-center gap-[8px] p-[16px] border-[3px] cursor-pointer transition-colors duration-[50ms] group ' +
+                    (isRunning
+                      ? 'bg-black text-white border-white hover:bg-white hover:text-black hover:border-black'
+                      : 'bg-white text-black border-black hover:bg-black hover:text-white hover:border-black')
+                  }
+                  onClick={() => handleLaunch(app)}
+                  onContextMenu={(e) => handleContextMenu(e, app)}
+                >
+                  {/* Icon */}
+                  <div className="w-[64px] h-[64px] flex items-center justify-center overflow-hidden">
+                    {app.iconDataUrl ? (
+                      <img
+                        src={app.iconDataUrl}
+                        alt={app.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div
+                        className={
+                          'w-full h-full flex items-center justify-center ' +
+                          (isRunning ? 'bg-white' : 'bg-black')
+                        }
+                      >
+                        <span
+                          className={
+                            'font-headline text-[24px] uppercase ' +
+                            (isRunning ? 'text-black' : 'text-white')
+                          }
+                        >
+                          {app.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Name */}
-                <span className="font-body text-[12px] text-center leading-tight text-inherit break-all line-clamp-2">
-                  {app.name}
-                </span>
-              </div>
-            ))}
+                  {/* Name */}
+                  <span className="font-body text-[12px] text-center leading-tight text-inherit break-all line-clamp-2">
+                    {app.name}
+                  </span>
+
+                  {/* Running indicator */}
+                  <span
+                    className={
+                      'font-mono text-[10px] uppercase tracking-[1px] ' +
+                      (isRunning ? 'text-success' : 'text-inherit opacity-40')
+                    }
+                  >
+                    {isRunning ? m.dock_running() : m.dock_stopped()}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -150,6 +209,15 @@ export const Route = createFileRoute('/dock')({
             >
               {m.dock_edit()}
             </button>
+            {/* Stop button — only show if running */}
+            {runningIds.includes(contextMenu.app.id) && (
+              <button
+                className="block w-full text-left font-body text-[13px] px-[12px] py-[8px] hover:bg-warning hover:text-white cursor-pointer border-b-[1px] border-black transition-colors duration-[50ms]"
+                onClick={handleStop}
+              >
+                {m.dock_stop()}
+              </button>
+            )}
             <button
               className="block w-full text-left font-body text-[13px] px-[12px] py-[8px] hover:bg-error hover:text-white cursor-pointer transition-colors duration-[50ms]"
               onClick={handleUninstall}

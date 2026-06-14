@@ -160,6 +160,9 @@ interface DockApi {
   remove: (id: string) => Promise<boolean>
   update: (id: string, patch: Partial<DockApp>) => Promise<DockApp>
   launch: (id: string) => Promise<void>
+  getRunning: () => Promise<string[]>
+  closeApp: (id: string) => Promise<void>
+  onRunningStateChange: (callback: (ids: string[]) => void) => () => void
 }
 
 declare global {

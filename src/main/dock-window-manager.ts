@@ -1,187 +1,187 @@
-import { BrowserWindow } from 'electron'
+import { spawn } from 'child_process'
+import type { ChildProcess } from 'child_process'
+import { app } from 'electron'
 import { join } from 'path'
+import { is } from '@electron-toolkit/utils'
 import type { DockApp } from './apps-store'
-import * as settings from './settings-store'
-import { getRaw as getBridgeConfig } from './bridge-store'
-import { ensureBridgeListener } from './bridge-injector'
-
-// ---------------------------------------------------------------------------
-// Drag-support CSS (injected into every dock app window's <body>)
-// Allows dragging frameless windows by the page background, while keeping
-// interactive elements clickable.
-// ---------------------------------------------------------------------------
-const DRAG_CSS = `
-  body {
-    -webkit-app-region: drag !important;
-    margin: 0;
-    padding: 0;
-    cursor: default;
-    user-select: none;
-  }
-  input, textarea, button, select, a, [contenteditable], [tabindex],
-  label, [role="button"], [role="link"], [role="checkbox"], [role="radio"],
-  [role="switch"], [draggable="true"], audio, video, iframe, embed, object {
-    -webkit-app-region: no-drag !important;
-    user-select: auto;
-  }
-`
 
 /**
  * Manages lifecycle of independent dock app windows.
- * Each app window is created as a separate BrowserWindow with the user's
- * configured preferences and inherits all bridge capabilities.
+ * Each app is launched as a separate Electron child process so that it
+ * gets its own OS-level dock / taskbar entry.
  */
 export class DockWindowManager {
-  /** Map of app id → BrowserWindow for all open dock windows */
-  private windows = new Map<string, BrowserWindow>()
+  /** Map of app id → ChildProcess for all running dock apps */
+  private processes = new Map<string, ChildProcess>()
+
+  /** Set of app ids that have signaled 'ready' */
+  private readyApps = new Set<string>()
+
+  /** Callbacks for running-state changes (renderer notification) */
+  private stateChangeListeners: Array<(runningIds: string[]) => void> = []
 
   /**
    * Launch (or focus) an independent window for the given dock app.
+   * Instead of creating a BrowserWindow in-process, we spawn a child
+   * Electron process that runs the app-runner entry.
    */
-  launch(app: DockApp): BrowserWindow {
-    // If already open, focus it
-    const existing = this.windows.get(app.id)
-    if (existing && !existing.isDestroyed()) {
-      if (existing.isMinimized()) existing.restore()
-      existing.focus()
-      return existing
+  launch(dockApp: DockApp): void {
+    // If already running, skip (the child process handles itself)
+    if (this.processes.has(dockApp.id)) {
+      return
     }
 
-    const { width, height, titleBarStyle, frame } = app.windowConfig
+    // Path to the app-runner entry
+    // In dev mode the runner is at __dirname/app-runner.js
+    // In prod mode it's the same layout
+    const runnerPath = join(__dirname, 'app-runner.js')
 
-    const windowOpts: Electron.BrowserWindowConstructorOptions = {
-      width,
-      height,
-      autoHideMenuBar: true,
-      title: app.name,
-      webPreferences: {
-        preload: join(__dirname, '../preload/browser-preload.js'),
-        sandbox: true
+    const childEnv = { ...process.env }
+    // Ensure it runs as Electron, not Node
+    delete childEnv.ELECTRON_RUN_AS_NODE
+    childEnv.ELECTRON_IS_DEV = is.dev ? '1' : '0'
+
+    const child = spawn(
+      process.execPath,
+      [runnerPath, '--app-runner', '--app-id', dockApp.id, '--app-name', app.name],
+      {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        // On Windows, detach so the child process is fully independent
+        windowsHide: false,
+        env: childEnv
       }
-    }
+    )
 
-    // Apply frame / titleBarStyle
-    if (!frame) {
-      windowOpts.frame = false
-    } else if (titleBarStyle === 'hidden') {
-      windowOpts.titleBarStyle = 'hidden'
-      windowOpts.titleBarOverlay = process.platform === 'darwin' ? { height: 38 } : undefined
-    } else if (titleBarStyle === 'none') {
-      windowOpts.frame = false
-    }
-    // 'default' → leave default frame
+    // Track the process
+    this.processes.set(dockApp.id, child)
 
-    const win = new BrowserWindow(windowOpts)
-
-    // Resolve effective User-Agent: per-app override → default → leave untouched
-    const effectiveUA = app.userAgent || settings.get('defaultUserAgent')
-    if (effectiveUA) {
-      win.webContents.userAgent = effectiveUA
-    }
-
-    // Track the window
-    this.windows.set(app.id, win)
-
-    win.on('closed', () => {
-      this.windows.delete(app.id)
+    // Listen for JSON-line messages on stdout
+    let buffer = ''
+    child.stdout?.on('data', (data: Buffer) => {
+      buffer += data.toString()
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? '' // keep partial line in buffer
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        try {
+          const msg = JSON.parse(trimmed)
+          if (msg.type === 'ready' && msg.appId === dockApp.id) {
+            this.readyApps.add(dockApp.id)
+            this.notifyStateChange()
+          } else if (msg.type === 'closed' && msg.appId === dockApp.id) {
+            this.readyApps.delete(dockApp.id)
+            this.processes.delete(dockApp.id)
+            this.notifyStateChange()
+          }
+        } catch {
+          // not JSON — ignore (might be Electron logs)
+        }
+      }
     })
 
-    // Inject drag-support CSS on every page load
-    const injectDragCSS = (): void => {
-      win.webContents.insertCSS(DRAG_CSS).catch(() => {
-        // Silently ignore — CSS insertion is best-effort
-      })
-    }
-
-    // Inject user-defined custom CSS on every page load
-    const injectCustomCSS = (): void => {
-      // Add platform class to <html> so platform-specific selectors work
-      const platformClass =
-        process.platform === 'darwin'
-          ? 'is-macos'
-          : process.platform === 'win32'
-            ? 'is-windows'
-            : 'is-linux'
-      win.webContents
-        .executeJavaScript(`document.documentElement.classList.add('${platformClass}')`)
-        .catch(() => {
-          // Best-effort
-        })
-
-      // Read per-app custom CSS
-      if (!app.customCss) return
-
-      let parts: Record<string, string>
-      try {
-        parts = JSON.parse(app.customCss)
-      } catch {
-        return
+    // Forward stderr for debugging
+    child.stderr?.on('data', (data: Buffer) => {
+      // In dev mode, let the user see child process errors
+      if (is.dev) {
+        process.stderr.write(`[app-runner:${dockApp.id}] ${data.toString()}`)
       }
-
-      // Common CSS — injected as-is
-      if (parts.common) {
-        win.webContents.insertCSS(parts.common).catch(() => {})
-      }
-
-      // Platform-specific CSS — wrapped in the platform class
-      const platformCss =
-        parts[
-          platformClass === 'is-macos'
-            ? 'isMacos'
-            : platformClass === 'is-windows'
-              ? 'isWindows'
-              : 'isLinux'
-        ]
-      if (platformCss) {
-        win.webContents.insertCSS(`.${platformClass} {\n${platformCss}\n}`).catch(() => {})
-      }
-    }
-
-    win.webContents.on('did-finish-load', () => {
-      injectDragCSS()
-      injectCustomCSS()
     })
 
-    // Load the target URL
-    void win.loadURL(app.url)
+    // Clean up on unexpected exit
+    child.on('exit', (code) => {
+      this.readyApps.delete(dockApp.id)
+      if (this.processes.get(dockApp.id) === child) {
+        this.processes.delete(dockApp.id)
+      }
+      this.notifyStateChange()
+      if (code !== 0 && is.dev) {
+        console.log(`[dock] app ${dockApp.id} exited with code ${code}`)
+      }
+    })
 
-    // Inject bridge after page loads (only if bridge is enabled)
-    const bridgeConfig = getBridgeConfig()
-    if (bridgeConfig.enabled && bridgeConfig.globalName) {
-      // We use a small helper that's imported from bridge-injector
-      ensureBridgeListener(win.webContents)
-    }
-
-    return win
+    child.on('error', (err) => {
+      console.error(`[dock] failed to launch app ${dockApp.id}:`, err.message)
+      this.readyApps.delete(dockApp.id)
+      this.processes.delete(dockApp.id)
+      this.notifyStateChange()
+    })
   }
 
   /**
-   * Close a specific dock app window.
+   * Close a specific dock app window by terminating its child process.
    */
   close(id: string): void {
-    const win = this.windows.get(id)
-    if (win && !win.isDestroyed()) {
-      win.close()
+    const child = this.processes.get(id)
+    if (!child) return
+
+    // Try graceful shutdown via SIGTERM, then force kill after timeout
+    child.kill('SIGTERM')
+    // On Windows SIGTERM is not supported — use taskkill as fallback
+    if (process.platform === 'win32') {
+      try {
+        spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'])
+      } catch {
+        // best-effort
+      }
     }
-    this.windows.delete(id)
+
+    // Remove immediately so the UI reflects the change
+    this.readyApps.delete(id)
+    this.processes.delete(id)
+    this.notifyStateChange()
   }
 
   /**
    * Close all open dock app windows.
    */
   closeAll(): void {
-    for (const [, win] of this.windows) {
-      if (!win.isDestroyed()) {
-        win.close()
-      }
+    for (const [id] of this.processes) {
+      this.close(id)
     }
-    this.windows.clear()
+    this.processes.clear()
+    this.readyApps.clear()
+    this.notifyStateChange()
   }
 
   /**
-   * Get the number of open dock app windows.
+   * Get the IDs of all running dock apps.
    */
-  get openCount(): number {
-    return this.windows.size
+  getRunningIds(): string[] {
+    return [...new Set([...this.processes.keys(), ...this.readyApps])].filter((id) =>
+      this.processes.has(id)
+    )
+  }
+
+  /**
+   * Check if a specific app is running (i.e., has signaled 'ready').
+   */
+  isRunning(id: string): boolean {
+    return this.readyApps.has(id) && this.processes.has(id)
+  }
+
+  /**
+   * Subscribe to running-state changes. Returns an unsubscribe function.
+   */
+  onStateChange(callback: (runningIds: string[]) => void): () => void {
+    this.stateChangeListeners.push(callback)
+    return () => {
+      const idx = this.stateChangeListeners.indexOf(callback)
+      if (idx !== -1) this.stateChangeListeners.splice(idx, 1)
+    }
+  }
+
+  /**
+   * Notify all state-change listeners.
+   */
+  private notifyStateChange(): void {
+    const runningIds = this.getRunningIds()
+    for (const cb of this.stateChangeListeners) {
+      try {
+        cb(runningIds)
+      } catch {
+        // listener error — don't break the chain
+      }
+    }
   }
 }
