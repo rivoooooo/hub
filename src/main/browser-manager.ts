@@ -267,8 +267,6 @@ export class BrowserManager {
 
     const js = `
 (function(){
-  if (window['${globalName}']) return; // already injected
-
   var tree = ${treeJson};
 
   function deepEqual(a, b) {
@@ -383,7 +381,7 @@ export class BrowserManager {
   Object.defineProperty(window, '${globalName}', {
     value: root,
     writable: false,
-    configurable: false
+    configurable: true
   });
 })();
 `

@@ -908,7 +908,7 @@ function BrowserControl(): React.JSX.Element {
       {/* Right sidebar */}
       {bridgeSidebar && (
         <div className="fixed top-0 right-0 z-50 h-full w-[480px] max-w-[92vw] bg-white border-l-[3px] border-black overflow-y-auto">
-          <div className="p-[24px]">
+          <div className="px-[24px] pt-16">
             {/* Header */}
             <div className="flex items-center justify-between pb-[16px]">
               <span className="font-headline text-[14px] uppercase tracking-wider text-black">
