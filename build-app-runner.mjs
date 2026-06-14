@@ -8,7 +8,7 @@
  */
 import { execSync } from 'child_process'
 import { copyFileSync, rmSync, existsSync, mkdirSync, readdirSync } from 'fs'
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
 
 const ROOT = process.cwd()
 const TMP = resolve(ROOT, 'out/.tmp-app-runner')
@@ -22,13 +22,21 @@ try {
     { stdio: 'pipe', cwd: ROOT }
   )
 
+  // Ensure the destination directory exists
+  mkdirSync(dirname(DST), { recursive: true })
+
   const builtDir = resolve(TMP, 'src/app-runner')
   if (!existsSync(builtDir)) {
     throw new Error(`Expected built directory not found: ${builtDir}`)
   }
   for (const file of readdirSync(builtDir)) {
     if (file.endsWith('.js')) {
-      copyFileSync(resolve(builtDir, file), resolve(ROOT, 'out/main', file))
+      // Rename index.js → app-runner.js to avoid overwriting the main process
+      // entry point (out/main/index.js).  Other files (e.g. logger.js) keep
+      // their original names — the main process is bundled into a single
+      // index.js by electron-vite, so there is no name collision.
+      const destName = file === 'index.js' ? 'app-runner.js' : file
+      copyFileSync(resolve(builtDir, file), resolve(ROOT, 'out/main', destName))
     }
   }
   console.log(`✓ app-runner built → ${DST}`)
