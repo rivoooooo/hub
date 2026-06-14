@@ -102,6 +102,11 @@
   "dock_install_titlebar_none": "None (frameless)",
   "dock_install_frame": "Show window frame",
   "dock_install_user_agent": "User-Agent (optional)",
+  "dock_install_custom_css": "Custom CSS",
+  "dock_install_css_common": "Common (always injected)",
+  "dock_install_css_macos": "macOS (.is-macos)",
+  "dock_install_css_windows": "Windows (.is-windows)",
+  "dock_install_css_linux": "Linux (.is-linux)",
   "dock_install_confirm": "INSTALL",
   "dock_card_desc": "Manage your installed PWA-style desktop apps"
 }

@@ -741,7 +741,8 @@ function BrowserControl(): React.JSX.Element {
         titleBarStyle: 'hidden',
         frame: true
       },
-      userAgent: ''
+      userAgent: '',
+      customCss: ''
     }),
     [url, width, height]
   )
@@ -753,7 +754,8 @@ function BrowserControl(): React.JSX.Element {
         url,
         iconDataUrl: values.iconDataUrl || '',
         windowConfig: values.windowConfig,
-        userAgent: values.userAgent || undefined
+        userAgent: values.userAgent || undefined,
+        customCss: values.customCss || undefined
       })
       setShowInstallModal(false)
     },

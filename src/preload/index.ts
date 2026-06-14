@@ -131,6 +131,7 @@ interface DockApp {
   iconDataUrl: string
   windowConfig: DockWindowConfig
   userAgent?: string
+  customCss?: string
   createdAt: number
 }
 

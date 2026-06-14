@@ -27,6 +27,8 @@ export interface DockFormValues {
   iconDataUrl: string
   windowConfig: DockWindowConfig
   userAgent: string
+  /** JSON with keys: common, isMacos, isWindows, isLinux */
+  customCss: string
 }
 
 interface DockAppFormModalProps {
@@ -61,6 +63,11 @@ export default function DockAppFormModal({
   const [titleBarStyle, setTitleBarStyle] = useState(initialValues.windowConfig.titleBarStyle)
   const [frame, setFrame] = useState(initialValues.windowConfig.frame)
   const [userAgent, setUserAgent] = useState(initialValues.userAgent)
+  const [cssCommon, setCssCommon] = useState('')
+  const [cssMacos, setCssMacos] = useState('')
+  const [cssWindows, setCssWindows] = useState('')
+  const [cssLinux, setCssLinux] = useState('')
+  const [customCssEnabled, setCustomCssEnabled] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   // Sync form when initialValues change (e.g. editing a different app)
@@ -72,6 +79,20 @@ export default function DockAppFormModal({
     setTitleBarStyle(initialValues.windowConfig.titleBarStyle)
     setFrame(initialValues.windowConfig.frame)
     setUserAgent(initialValues.userAgent)
+    try {
+      const parsed = JSON.parse(initialValues.customCss || '{}')
+      setCssCommon(parsed.common || '')
+      setCssMacos(parsed.isMacos || '')
+      setCssWindows(parsed.isWindows || '')
+      setCssLinux(parsed.isLinux || '')
+      setCustomCssEnabled(!!(parsed.common || parsed.isMacos || parsed.isWindows || parsed.isLinux))
+    } catch {
+      setCssCommon('')
+      setCssMacos('')
+      setCssWindows('')
+      setCssLinux('')
+      setCustomCssEnabled(false)
+    }
   }, [initialValues])
 
   const handleSubmit = useCallback(() => {
@@ -80,9 +101,28 @@ export default function DockAppFormModal({
       name,
       iconDataUrl: iconUrl,
       windowConfig: { width, height, titleBarStyle, frame },
-      userAgent
+      userAgent,
+      customCss: JSON.stringify({
+        common: cssCommon,
+        isMacos: cssMacos,
+        isWindows: cssWindows,
+        isLinux: cssLinux
+      })
     }).finally(() => setSubmitting(false))
-  }, [name, iconUrl, width, height, titleBarStyle, frame, userAgent, onSubmit])
+  }, [
+    name,
+    iconUrl,
+    width,
+    height,
+    titleBarStyle,
+    frame,
+    userAgent,
+    cssCommon,
+    cssMacos,
+    cssWindows,
+    cssLinux,
+    onSubmit
+  ])
 
   if (!open) return null
 
@@ -152,6 +192,86 @@ export default function DockAppFormModal({
             placeholder="Mozilla/5.0 ..."
             disabled={submitting}
           />
+        </div>
+
+        {/* Custom CSS — collapsible */}
+        <div className="pb-[12px]">
+          <div className="flex items-center gap-[8px] pb-[4px]">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={customCssEnabled}
+              className={`relative inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer items-center border-[2px] border-black transition-colors duration-[50ms] ${
+                customCssEnabled ? 'bg-black' : 'bg-white'
+              }`}
+              onClick={() => setCustomCssEnabled(!customCssEnabled)}
+            >
+              <span
+                className={`inline-block h-[12px] w-[12px] border-[2px] border-black transition-transform duration-[50ms] ${
+                  customCssEnabled ? 'translate-x-[18px] bg-white' : 'translate-x-[2px] bg-black'
+                }`}
+              />
+            </button>
+            <span className="font-headline text-[12px] uppercase tracking-wider text-black">
+              {m.dock_install_custom_css()}
+            </span>
+          </div>
+          {customCssEnabled && (
+            <>
+              <div className="pt-[8px]">
+                <label className="block font-mono text-[11px] text-black pb-[4px]">
+                  {m.dock_install_css_common()}
+                </label>
+                <textarea
+                  className={`w-full ${inputCls} resize-y min-h-[60px] font-mono text-[13px]`}
+                  rows={3}
+                  value={cssCommon}
+                  onChange={(e) => setCssCommon(e.target.value)}
+                  placeholder="body { background: #f0f0f0; }"
+                  disabled={submitting}
+                />
+              </div>
+              <div className="pt-[8px]">
+                <label className="block font-mono text-[11px] text-black pb-[4px]">
+                  {m.dock_install_css_macos()}
+                </label>
+                <textarea
+                  className={`w-full ${inputCls} resize-y min-h-[60px] font-mono text-[13px]`}
+                  rows={2}
+                  value={cssMacos}
+                  onChange={(e) => setCssMacos(e.target.value)}
+                  placeholder="/* wrapped in .is-macos */"
+                  disabled={submitting}
+                />
+              </div>
+              <div className="pt-[8px]">
+                <label className="block font-mono text-[11px] text-black pb-[4px]">
+                  {m.dock_install_css_windows()}
+                </label>
+                <textarea
+                  className={`w-full ${inputCls} resize-y min-h-[60px] font-mono text-[13px]`}
+                  rows={2}
+                  value={cssWindows}
+                  onChange={(e) => setCssWindows(e.target.value)}
+                  placeholder="/* wrapped in .is-windows */"
+                  disabled={submitting}
+                />
+              </div>
+              <div className="pt-[8px]">
+                <label className="block font-mono text-[11px] text-black pb-[4px]">
+                  {m.dock_install_css_linux()}
+                </label>
+                <textarea
+                  className={`w-full ${inputCls} resize-y min-h-[60px] font-mono text-[13px]`}
+                  rows={2}
+                  value={cssLinux}
+                  onChange={(e) => setCssLinux(e.target.value)}
+                  placeholder="/* wrapped in .is-linux */"
+                  disabled={submitting}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Window Size */}

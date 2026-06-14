@@ -76,13 +76,15 @@ export const Route = createFileRoute('/dock')({
           name: editApp.name,
           iconDataUrl: editApp.iconDataUrl,
           windowConfig: { ...editApp.windowConfig },
-          userAgent: editApp.userAgent || ''
+          userAgent: editApp.userAgent || '',
+          customCss: editApp.customCss || ''
         }
       : {
           name: '',
           iconDataUrl: '',
           windowConfig: { width: 1024, height: 768, titleBarStyle: 'hidden' as const, frame: true },
-          userAgent: ''
+          userAgent: '',
+          customCss: ''
         }
 
     return (
@@ -188,5 +190,6 @@ interface DockApp {
   iconDataUrl: string
   windowConfig: DockWindowConfig
   userAgent?: string
+  customCss?: string
   createdAt: number
 }

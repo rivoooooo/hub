@@ -22,6 +22,8 @@ export interface DockApp {
   iconDataUrl: string
   windowConfig: DockWindowConfig
   userAgent?: string
+  /** JSON with keys: common, isMacos, isWindows, isLinux — or undefined for none */
+  customCss?: string
   createdAt: number
 }
 

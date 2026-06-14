@@ -92,7 +92,55 @@ export class DockWindowManager {
         // Silently ignore — CSS insertion is best-effort
       })
     }
-    win.webContents.on('did-finish-load', injectDragCSS)
+
+    // Inject user-defined custom CSS on every page load
+    const injectCustomCSS = (): void => {
+      // Add platform class to <html> so platform-specific selectors work
+      const platformClass =
+        process.platform === 'darwin'
+          ? 'is-macos'
+          : process.platform === 'win32'
+            ? 'is-windows'
+            : 'is-linux'
+      win.webContents
+        .executeJavaScript(`document.documentElement.classList.add('${platformClass}')`)
+        .catch(() => {
+          // Best-effort
+        })
+
+      // Read per-app custom CSS
+      if (!app.customCss) return
+
+      let parts: Record<string, string>
+      try {
+        parts = JSON.parse(app.customCss)
+      } catch {
+        return
+      }
+
+      // Common CSS — injected as-is
+      if (parts.common) {
+        win.webContents.insertCSS(parts.common).catch(() => {})
+      }
+
+      // Platform-specific CSS — wrapped in the platform class
+      const platformCss =
+        parts[
+          platformClass === 'is-macos'
+            ? 'isMacos'
+            : platformClass === 'is-windows'
+              ? 'isWindows'
+              : 'isLinux'
+        ]
+      if (platformCss) {
+        win.webContents.insertCSS(`.${platformClass} {\n${platformCss}\n}`).catch(() => {})
+      }
+    }
+
+    win.webContents.on('did-finish-load', () => {
+      injectDragCSS()
+      injectCustomCSS()
+    })
 
     // Load the target URL
     void win.loadURL(app.url)

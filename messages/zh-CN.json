@@ -102,6 +102,11 @@
   "dock_install_titlebar_none": "无边框",
   "dock_install_frame": "显示窗口边框",
   "dock_install_user_agent": "User-Agent（可选）",
+  "dock_install_custom_css": "自定义 CSS",
+  "dock_install_css_common": "通用（始终注入）",
+  "dock_install_css_macos": "macOS（.is-macos）",
+  "dock_install_css_windows": "Windows（.is-windows）",
+  "dock_install_css_linux": "Linux（.is-linux）",
   "dock_install_confirm": "安装",
   "dock_card_desc": "管理已安装的 PWA 风格桌面应用"
 }
