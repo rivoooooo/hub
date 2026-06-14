@@ -51,7 +51,7 @@ export interface BridgeFunctionConfig {
    * Response delivery mode.
    * - 'async': (default) routes call via IPC, returns a Promise.
    * - 'sync':   inlines the return value at injection time, no IPC round‑trip.
-   *             Only meaningful when mode === 'static'.
+   *             Works with all modes: static, declarative, and custom.
    */
   responseMode?: 'async' | 'sync'
 }

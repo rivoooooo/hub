@@ -12,6 +12,7 @@ import * as appsStore from './apps-store'
 import * as logStore from './log-store'
 import { getLogger } from './logger'
 import { getConfigDir } from './config-dir'
+import { runInSandbox } from './sandbox'
 
 // If this is an app-runner child process, exit immediately —
 // the app-runner entry point handles that case separately.
@@ -364,13 +365,9 @@ app.whenReady().then(() => {
       }
 
       case 'custom': {
-        const codeStr = fnConfig.codeString
-        if (!codeStr) {
-          return { error: 'custom function has no code' }
-        }
         try {
-          const fn = new Function('args', `return (${codeStr})(args)`)
-          return fn(args)
+          const result = runInSandbox(fnConfig.codeString ?? '', args)
+          return result
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           return { error: `custom function error: ${msg}` }

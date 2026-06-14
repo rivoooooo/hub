@@ -64,6 +64,7 @@ export function injectBridge(webContents: Electron.WebContents): void {
   function buildProxy(path, node) {
     if (node.type === 'function') {
       var fc = node.functionConfig;
+      // --- Sync (no IPC) branch — one handler per mode ---
       if (fc && fc.responseMode === 'sync') {
         // declarative sync — inline matching logic, no IPC
         if (fc.mode === 'declarative') {
@@ -115,10 +116,27 @@ export function injectBridge(webContents: Electron.WebContents): void {
             return { error: 'declarative: no matching entry and no fallback' };
           };
         }
-        // static sync — inline the parsed value directly
-        var _val;
-        try { _val = JSON.parse(fc.returnValue); } catch(e) { _val = fc.returnValue; }
-        return function() { return _val; };
+        // custom sync — inline the user function, no IPC
+        if (fc.mode === 'custom') {
+          var _codeStr = fc.codeString || '';
+          if (_codeStr) {
+            return function() {
+              var args = Array.prototype.slice.call(arguments);
+              try {
+                return (new Function('args', 'return (' + _codeStr + ')(args)'))(args);
+              } catch(e) {
+                return { error: 'custom function error: ' + (e.message || String(e)) };
+              }
+            };
+          }
+        }
+        // static sync — only inline when returnValue is non-empty
+        if (fc.returnValue && fc.returnValue.trim() !== '') {
+          var _val;
+          try { _val = JSON.parse(fc.returnValue); } catch(e) { _val = fc.returnValue; }
+          return function() { return _val; };
+        }
+        // No valid sync content — fall through to default async IPC
       }
       // Default async mode — route via IPC
       return function() {

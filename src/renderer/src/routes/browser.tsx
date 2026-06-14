@@ -208,46 +208,44 @@ function BridgeNodeEditor({ node, onChange, onRemove, depth }: NodeEditorProps):
             </select>
           </div>
 
-          {/* Sync toggle — static & declarative modes */}
-          {(mode === 'static' || mode === 'declarative') && (
-            <div className="flex items-center gap-[6px] pt-[4px]">
-              <span className="relative w-[20px] h-[20px]">
-                <input
-                  id="sync-toggle"
-                  type="checkbox"
-                  className="peer w-[20px] h-[20px] border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms] focus:border-[5px]"
-                  checked={fnCfg.responseMode === 'sync'}
-                  onChange={(e) =>
-                    update({
-                      functionConfig: {
-                        ...fnCfg,
-                        responseMode: e.target.checked ? 'sync' : 'async'
-                      }
-                    })
-                  }
-                />
-                <svg
-                  className="absolute inset-0 w-[20px] h-[20px] pointer-events-none hidden peer-checked:block"
-                  viewBox="0 0 20 20"
-                >
-                  <polyline
-                    points="5,10 9,14 15,6"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="3"
-                    strokeLinecap="square"
-                    strokeLinejoin="miter"
-                  />
-                </svg>
-              </span>
-              <label
-                htmlFor="sync-toggle"
-                className="font-body text-[11px] uppercase tracking-[1px] text-black cursor-pointer select-none"
+          {/* Sync toggle — available for all modes */}
+          <div className="flex items-center gap-[6px] pt-[4px]">
+            <span className="relative w-[20px] h-[20px]">
+              <input
+                id="sync-toggle"
+                type="checkbox"
+                className="peer w-[20px] h-[20px] border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms] focus:border-[5px]"
+                checked={fnCfg.responseMode === 'sync'}
+                onChange={(e) =>
+                  update({
+                    functionConfig: {
+                      ...fnCfg,
+                      responseMode: e.target.checked ? 'sync' : 'async'
+                    }
+                  })
+                }
+              />
+              <svg
+                className="absolute inset-0 w-[20px] h-[20px] pointer-events-none hidden peer-checked:block"
+                viewBox="0 0 20 20"
               >
-                sync (no IPC)
-              </label>
-            </div>
-          )}
+                <polyline
+                  points="5,10 9,14 15,6"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="square"
+                  strokeLinejoin="miter"
+                />
+              </svg>
+            </span>
+            <label
+              htmlFor="sync-toggle"
+              className="font-body text-[11px] uppercase tracking-[1px] text-black cursor-pointer select-none"
+            >
+              sync (no IPC)
+            </label>
+          </div>
 
           {/* Static / Declarative: returnValue */}
           {(mode === 'static' || mode === 'declarative') && (
