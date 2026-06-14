@@ -168,6 +168,55 @@ interface DockApi {
   onRunningStateChange: (callback: (ids: string[]) => void) => () => void
 }
 
+// --- Logs types ---
+
+interface LogRecentEntry {
+  filepath: string
+  filename: string
+  lastOpened: number
+}
+
+interface LogFavoriteEntry {
+  filepath: string
+  filename: string
+  label?: string
+  addedAt: number
+}
+
+interface FileReadResult {
+  content: string
+  totalLines: number
+  size: number
+}
+
+interface DirEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+  size: number
+  mtimeMs: number
+}
+
+interface LogsApi {
+  readFile: (filepath: string, offset?: number, limit?: number) => Promise<FileReadResult>
+  listDirectory: (dirpath: string) => Promise<DirEntry[]>
+  getDataDir: () => Promise<string>
+  pathExists: (filepath: string) => Promise<boolean>
+  isDirectory: (filepath: string) => Promise<boolean>
+  getRecents: () => Promise<LogRecentEntry[]>
+  addRecent: (filepath: string) => Promise<LogRecentEntry[]>
+  removeRecent: (filepath: string) => Promise<LogRecentEntry[]>
+  clearRecents: () => Promise<void>
+  getFavorites: () => Promise<LogFavoriteEntry[]>
+  addFavorite: (filepath: string, label?: string) => Promise<LogFavoriteEntry[]>
+  removeFavorite: (filepath: string) => Promise<LogFavoriteEntry[]>
+  isFavorite: (filepath: string) => Promise<boolean>
+  watchStart: (filepath: string) => Promise<void>
+  watchStop: (filepath: string) => Promise<void>
+  inferType: (filepath: string) => Promise<'txt' | 'json'>
+  onFileChanged: (callback: (filepath: string, content: string) => void) => () => void
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -180,6 +229,7 @@ declare global {
     browserControls: BrowserControls
     seoApi: SeoApi
     dockApi: DockApi
+    logsApi: LogsApi
     /** Bridge IPC channel — used by injected Proxy bridge on target pages */
     __bridgeCall: BridgeCallChannel
   }

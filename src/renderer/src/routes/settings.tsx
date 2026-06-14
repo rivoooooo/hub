@@ -231,6 +231,23 @@ export const Route = createFileRoute('/settings')({
           )}
         </section>
 
+        {/* System Logs */}
+        <section className="pb-[40px]">
+          <h2 className="font-headline text-[12px] uppercase tracking-[3px] text-black pb-[16px] border-b-[3px] border-black mb-[16px]">
+            {m.logs_system_logs()}
+          </h2>
+          <p className="font-mono text-[14px] leading-[1.5] text-black pb-[12px]">
+            {m.logs_system_logs_desc()}
+          </p>
+          <Link
+            to="/logs"
+            search={{ isDirectory: true }}
+            className="inline-block font-mono text-[13px] leading-[1.5] py-[8px] px-[16px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black no-underline"
+          >
+            {m.logs_open_file()}
+          </Link>
+        </section>
+
         {/* About */}
         <div className="pt-[16px]">
           <Link to="/about" className="font-mono text-[15px] text-black underline hover:text-blue">

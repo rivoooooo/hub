@@ -106,6 +106,71 @@ const browserControls = {
 }
 
 // ---------------------------------------------------------------------------
+// Logs API
+// ---------------------------------------------------------------------------
+
+interface FileReadResult {
+  content: string
+  totalLines: number
+  size: number
+}
+
+interface DirEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+  size: number
+  mtimeMs: number
+}
+
+interface LogRecentEntry {
+  filepath: string
+  filename: string
+  lastOpened: number
+}
+
+interface LogFavoriteEntry {
+  filepath: string
+  filename: string
+  label?: string
+  addedAt: number
+}
+
+const logsApi = {
+  readFile: (filepath: string, offset?: number, limit?: number): Promise<FileReadResult> =>
+    ipcRenderer.invoke('logs:read-file', filepath, offset, limit),
+  listDirectory: (dirpath: string): Promise<DirEntry[]> =>
+    ipcRenderer.invoke('logs:list-directory', dirpath),
+  getDataDir: (): Promise<string> => ipcRenderer.invoke('logs:get-data-dir'),
+  pathExists: (filepath: string): Promise<boolean> =>
+    ipcRenderer.invoke('logs:path-exists', filepath),
+  isDirectory: (filepath: string): Promise<boolean> =>
+    ipcRenderer.invoke('logs:is-directory', filepath),
+  getRecents: (): Promise<LogRecentEntry[]> => ipcRenderer.invoke('logs:get-recents'),
+  addRecent: (filepath: string): Promise<LogRecentEntry[]> =>
+    ipcRenderer.invoke('logs:add-recent', filepath),
+  removeRecent: (filepath: string): Promise<LogRecentEntry[]> =>
+    ipcRenderer.invoke('logs:remove-recent', filepath),
+  clearRecents: (): Promise<void> => ipcRenderer.invoke('logs:clear-recents'),
+  getFavorites: (): Promise<LogFavoriteEntry[]> => ipcRenderer.invoke('logs:get-favorites'),
+  addFavorite: (filepath: string, label?: string): Promise<LogFavoriteEntry[]> =>
+    ipcRenderer.invoke('logs:add-favorite', filepath, label),
+  removeFavorite: (filepath: string): Promise<LogFavoriteEntry[]> =>
+    ipcRenderer.invoke('logs:remove-favorite', filepath),
+  isFavorite: (filepath: string): Promise<boolean> =>
+    ipcRenderer.invoke('logs:is-favorite', filepath),
+  watchStart: (filepath: string): Promise<void> => ipcRenderer.invoke('logs:watch-start', filepath),
+  watchStop: (filepath: string): Promise<void> => ipcRenderer.invoke('logs:watch-stop', filepath),
+  inferType: (filepath: string): Promise<'txt' | 'json'> =>
+    ipcRenderer.invoke('logs:infer-type', filepath),
+  onFileChanged: (callback: (filepath: string, content: string) => void): (() => void) => {
+    const handler = (_event: unknown, fp: string, content: string): void => callback(fp, content)
+    ipcRenderer.on('logs:file-changed', handler)
+    return () => ipcRenderer.removeListener('logs:file-changed', handler)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // SEO API (types live in index.d.ts)
 // ---------------------------------------------------------------------------
 
@@ -217,6 +282,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('browserControls', browserControls)
     contextBridge.exposeInMainWorld('seoApi', seoApi)
     contextBridge.exposeInMainWorld('dockApi', dockApi)
+    contextBridge.exposeInMainWorld('logsApi', logsApi)
 
     // Bridge IPC channel — used by injected Proxy bridge on target pages
     contextBridge.exposeInMainWorld('__bridgeCall', {
@@ -243,6 +309,8 @@ if (process.contextIsolated) {
   window.seoApi = seoApi
   // @ts-expect-error (define in dts)
   window.dockApi = dockApi
+  // @ts-expect-error (define in dts)
+  window.logsApi = logsApi
   // @ts-expect-error (define in dts)
   window.__bridgeCall = {
     call: (path: string[], ...args: unknown[]): Promise<unknown> =>

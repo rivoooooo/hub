@@ -8,6 +8,7 @@ import * as bridgeStore from './bridge-store'
 import { registerSeoHandlers } from './seo'
 import { DockWindowManager } from './dock-window-manager'
 import * as appsStore from './apps-store'
+import * as logStore from './log-store'
 
 // If this is an app-runner child process, exit immediately —
 // the app-runner entry point handles that case separately.
@@ -384,6 +385,67 @@ app.whenReady().then(() => {
     }
   })
 
+  // --------------------------------------------------
+  // Logs
+  // --------------------------------------------------
+
+  ipcMain.handle('logs:read-file', (_event, filepath: string, offset?: number, limit?: number) => {
+    return logStore.readFile(filepath, offset, limit)
+  })
+
+  ipcMain.handle('logs:list-directory', (_event, dirpath: string) => {
+    return logStore.listDirectory(dirpath)
+  })
+
+  ipcMain.handle('logs:get-data-dir', () => {
+    return logStore.getDataDir()
+  })
+
+  ipcMain.handle('logs:path-exists', (_event, filepath: string) => {
+    return logStore.pathExists(filepath)
+  })
+
+  ipcMain.handle('logs:is-directory', (_event, filepath: string) => {
+    return logStore.isDirectory(filepath)
+  })
+
+  // Recents
+  ipcMain.handle('logs:get-recents', () => logStore.getRecents())
+  ipcMain.handle('logs:add-recent', (_event, filepath: string) => logStore.addRecent(filepath))
+  ipcMain.handle('logs:remove-recent', (_event, filepath: string) =>
+    logStore.removeRecent(filepath)
+  )
+  ipcMain.handle('logs:clear-recents', () => logStore.clearRecents())
+
+  // Favorites
+  ipcMain.handle('logs:get-favorites', () => logStore.getFavorites())
+  ipcMain.handle('logs:add-favorite', (_event, filepath: string, label?: string) =>
+    logStore.addFavorite(filepath, label)
+  )
+  ipcMain.handle('logs:remove-favorite', (_event, filepath: string) =>
+    logStore.removeFavorite(filepath)
+  )
+  ipcMain.handle('logs:is-favorite', (_event, filepath: string) => logStore.isFavorite(filepath))
+
+  // Watch — start watching a file and push updates to all renderers
+  ipcMain.handle('logs:watch-start', (_event, filepath: string) => {
+    logStore.startWatching(filepath, (content) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (win.isDestroyed()) continue
+        win.webContents.send('logs:file-changed', filepath, content)
+      }
+    })
+  })
+
+  ipcMain.handle('logs:watch-stop', (_event, filepath: string) => {
+    logStore.stopWatching(filepath)
+  })
+
+  // Resolve log type
+  ipcMain.handle('logs:infer-type', (_event, filepath: string) => {
+    return logStore.inferType(filepath)
+  })
+
   createWindow()
   isReady = true
 
@@ -406,6 +468,7 @@ app.on('window-all-closed', () => {
 
 // Clean up dock windows when the app is about to quit
 app.on('will-quit', () => {
+  logStore.stopAllWatching()
   if (dockWindowManager) {
     dockWindowManager.closeAll()
   }
