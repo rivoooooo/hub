@@ -65,6 +65,13 @@ export class DockWindowManager {
       }
     )
 
+    getLogger().info(`Spawned app-runner process`, {
+      appId: dockApp.id,
+      appName: dockApp.name,
+      runnerPath,
+      pid: child.pid
+    })
+
     // Track the process
     this.processes.set(dockApp.id, child)
 
@@ -95,22 +102,23 @@ export class DockWindowManager {
 
     // Forward stderr for debugging
     child.stderr?.on('data', (data: Buffer) => {
-      // In dev mode, let the user see child process errors
-      if (is.dev) {
-        process.stderr.write(`[app-runner:${dockApp.id}] ${data.toString()}`)
-      }
+      getLogger().warn(`[app-runner:${dockApp.id}] stderr: ${data.toString().trim()}`, {
+        appId: dockApp.id
+      })
     })
 
     // Clean up on unexpected exit
     child.on('exit', (code) => {
+      getLogger().info(`App-runner process exited`, {
+        appId: dockApp.id,
+        exitCode: code,
+        pid: child.pid
+      })
       this.readyApps.delete(dockApp.id)
       if (this.processes.get(dockApp.id) === child) {
         this.processes.delete(dockApp.id)
       }
       this.notifyStateChange()
-      if (code !== 0 && is.dev) {
-        getLogger().warn(`App ${dockApp.id} exited with code ${code}`, { code, appId: dockApp.id })
-      }
     })
 
     child.on('error', (err) => {

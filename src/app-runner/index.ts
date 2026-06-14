@@ -36,6 +36,8 @@ if (!APP_ID) {
 const appNameIndex = process.argv.indexOf('--app-name')
 const APP_NAME = appNameIndex !== -1 ? process.argv[appNameIndex + 1] : undefined
 
+getLogger().info('app-runner starting', { appId: APP_ID, appName: APP_NAME ?? '(none)' })
+
 if (APP_NAME) {
   app.setName(APP_NAME)
 }
@@ -73,6 +75,7 @@ interface DockApp {
 }
 
 function readAppConfig(id: string, configDir: string): DockApp | null {
+  getLogger().info('Reading app config', { configDir, appId: id })
   const appsFile = join(configDir, 'apps.json')
   if (!existsSync(appsFile)) {
     getLogger().error(`Apps.json not found at ${appsFile}`)
@@ -81,7 +84,13 @@ function readAppConfig(id: string, configDir: string): DockApp | null {
   try {
     const raw = readFileSync(appsFile, 'utf-8')
     const apps: DockApp[] = JSON.parse(raw)
-    return apps.find((a) => a.id === id) ?? null
+    const found = apps.find((a) => a.id === id) ?? null
+    if (found) {
+      getLogger().info('App config found', { appId: id, name: found.name, url: found.url })
+    } else {
+      getLogger().error(`App ${id} not found in apps.json (${apps.length} apps total)`)
+    }
+    return found
   } catch (err) {
     getLogger().error('Failed to read apps.json', err)
     return null
@@ -268,6 +277,13 @@ const DRAG_CSS = `
 // ---------------------------------------------------------------------------
 
 async function createAppWindow(appCfg: DockApp): Promise<void> {
+  getLogger().info('Creating app window', {
+    name: appCfg.name,
+    url: appCfg.url,
+    width: appCfg.windowConfig.width,
+    height: appCfg.windowConfig.height
+  })
+
   const { width, height, titleBarStyle, frame } = appCfg.windowConfig
 
   const windowOpts: Electron.BrowserWindowConstructorOptions = {
@@ -367,6 +383,7 @@ async function createAppWindow(appCfg: DockApp): Promise<void> {
   console.log(JSON.stringify({ type: 'ready', appId: APP_ID }))
 
   // Load the target URL
+  getLogger().info('Loading URL', { url: appCfg.url })
   void win.loadURL(appCfg.url)
 
   // When the window is closed, quit this process
@@ -380,21 +397,45 @@ async function createAppWindow(appCfg: DockApp): Promise<void> {
 // Bootstrap
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(async () => {
-  // OS-specific optimisations for taskbar / dock separation
-  if (process.platform === 'win32') {
-    // Set a unique AppUserModelId so the taskbar entry is fully independent
-    app.setAppUserModelId(`com.electron.dev-browser.app-runner.${APP_ID}`)
-  }
-  const appCfg = readAppConfig(APP_ID!, CONFIG_DIR ?? USER_DATA_PATH ?? app.getPath('userData'))
-  if (!appCfg) {
-    getLogger().error(`App ${APP_ID} not found in apps.json`)
-    app.quit()
-    return
-  }
+app
+  .whenReady()
+  .then(async () => {
+    // OS-specific optimisations for taskbar / dock separation
+    if (process.platform === 'win32') {
+      // Set a unique AppUserModelId so the taskbar entry is fully independent
+      app.setAppUserModelId(`com.electron.dev-browser.app-runner.${APP_ID}`)
+    }
+    const configDir = CONFIG_DIR ?? USER_DATA_PATH ?? app.getPath('userData')
+    getLogger().info('App ready, reading config', { configDir, appId: APP_ID })
 
-  await createAppWindow(appCfg)
-})
+    const appCfg = readAppConfig(APP_ID!, configDir)
+    if (!appCfg) {
+      getLogger().error(`App ${APP_ID} not found in apps.json`)
+      app.quit()
+      return
+    }
+
+    try {
+      await createAppWindow(appCfg)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      getLogger().error('Failed to create app window', {
+        appId: APP_ID,
+        error: message,
+        stack: err instanceof Error ? err.stack : undefined
+      })
+      app.quit()
+    }
+  })
+  .catch((err) => {
+    const message = err instanceof Error ? err.message : String(err)
+    getLogger().error('Fatal app-runner error', {
+      appId: APP_ID,
+      error: message,
+      stack: err instanceof Error ? err.stack : undefined
+    })
+    app.quit()
+  })
 
 // Prevent the default Electron app quit on all-windows-closed — we manage it
 // ourselves via win.on('closed') above.
