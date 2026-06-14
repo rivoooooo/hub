@@ -1,6 +1,6 @@
-import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
+import { getConfigDir } from './config-dir'
 
 // ---------------------------------------------------------------------------
 // New recursive tree type
@@ -82,7 +82,7 @@ export interface BridgeConfig {
 // Defaults & persistence
 // ---------------------------------------------------------------------------
 
-const CONFIG_FILE = join(app.getPath('userData'), 'bridge-config.json')
+const CONFIG_FILE = join(getConfigDir(), 'bridge-config.json')
 
 const DEFAULTS: BridgeConfig = {
   enabled: false,

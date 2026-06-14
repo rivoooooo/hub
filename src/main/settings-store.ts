@@ -1,8 +1,8 @@
-import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
+import { getConfigDir } from './config-dir'
 
-const SETTINGS_FILE = join(app.getPath('userData'), 'settings.json')
+const SETTINGS_FILE = join(getConfigDir(), 'settings.json')
 
 export type BrowserTitleBarMode = 'default' | 'hidden' | 'transparent'
 
@@ -11,7 +11,6 @@ export interface SettingsData {
   toolbarVisible: boolean
   proxyEnabled: boolean
   proxyUrl: string
-  seoHistoryDir: string
   browserUserAgent: string
   defaultUserAgent: string
 }
@@ -21,7 +20,6 @@ const DEFAULTS: SettingsData = {
   toolbarVisible: false,
   proxyEnabled: false,
   proxyUrl: '',
-  seoHistoryDir: '',
   browserUserAgent: '',
   defaultUserAgent: ''
 }

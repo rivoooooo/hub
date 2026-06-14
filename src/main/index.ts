@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { existsSync, copyFileSync, mkdirSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { BrowserManager } from './browser-manager'
@@ -10,6 +11,7 @@ import { DockWindowManager } from './dock-window-manager'
 import * as appsStore from './apps-store'
 import * as logStore from './log-store'
 import { getLogger } from './logger'
+import { getConfigDir } from './config-dir'
 
 // If this is an app-runner child process, exit immediately —
 // the app-runner entry point handles that case separately.
@@ -106,6 +108,16 @@ app.whenReady().then(() => {
   // electron-log creates its directory and log file on disk.
   getLogger().info('App started')
 
+  // --------------------------------------------------
+  // Migrate config files from the old userData directory
+  // to ~/.rivo (the dedicated config directory).
+  // Only copies when the source exists and the destination
+  // does not (one-time migration per file).
+  // --------------------------------------------------
+  migrateConfigFile('settings.json')
+  migrateConfigFile('apps.json')
+  migrateConfigFile('bridge-config.json')
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -186,6 +198,9 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
     settings.set(key as keyof settings.SettingsData, value as never)
   })
+
+  // Config directory
+  ipcMain.handle('config-dir:get', () => getConfigDir())
 
   // Bridge (async — used by renderer settings UI)
   ipcMain.handle('bridge:get-config', () => bridgeStore.getConfig())
@@ -514,6 +529,26 @@ app.on('will-quit', () => {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Copy a config file from the old userData location to the new config
+ * directory (~/.rivo) if the source exists and the destination does not.
+ * This is a one-time migration per file, triggered at app startup.
+ */
+function migrateConfigFile(filename: string): void {
+  const src = join(app.getPath('userData'), filename)
+  const dst = join(getConfigDir(), filename)
+
+  if (existsSync(src) && !existsSync(dst)) {
+    try {
+      mkdirSync(getConfigDir(), { recursive: true })
+      copyFileSync(src, dst)
+      getLogger().info(`Migrated config: ${filename} → ${dst}`)
+    } catch (err) {
+      getLogger().error(`Failed to migrate ${filename}:`, err)
+    }
+  }
+}
 
 /** Recursive deep-equal for declarative value matching. */
 function deepEqual(a: unknown, b: unknown): boolean {

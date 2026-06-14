@@ -76,7 +76,7 @@ export const Route = createFileRoute('/logs')({
             to="/"
             className="font-mono text-[13px] text-black underline hover:text-blue transition-colors"
           >
-            ← {m.back_to_home()}
+            {m.back_to_home()}
           </Link>
           <h1 className="font-headline text-[32px] leading-none text-black">{m.logs_title()}</h1>
           <span className="font-mono text-[11px] text-black/50">

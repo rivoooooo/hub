@@ -31,24 +31,23 @@ export const Route = createFileRoute('/settings')({
     const navigate = useNavigate()
     const [proxyEnabled, setProxyEnabled] = useState(false)
     const [proxyUrl, setProxyUrl] = useState('')
-    const [seoHistoryDir, setSeoHistoryDir] = useState('')
     const [defaultUserAgent, setDefaultUserAgent] = useState('')
+    const [configDir, setConfigDir] = useState('')
     const [dataDir, setDataDir] = useState('')
     const [logsDir, setLogsDir] = useState('')
     const [loaded, setLoaded] = useState(false)
     const proxyUrlRef = useRef<HTMLInputElement>(null)
-    const seoHistoryDirRef = useRef<HTMLInputElement>(null)
 
     // Load current settings once
     useEffect(() => {
       window.settingsApi.get().then((s) => {
         setProxyEnabled(s.proxyEnabled)
         setProxyUrl(s.proxyUrl)
-        setSeoHistoryDir(s.seoHistoryDir)
         setDefaultUserAgent(s.defaultUserAgent)
         setLoaded(true)
       })
-      window.logsApi.getDataDir().then(setDataDir)
+      window.api.getConfigDir().then(setConfigDir)
+      window.seoApi.getDataDir().then(setDataDir)
       window.logsApi.getLogsDir().then(setLogsDir)
     }, [])
 
@@ -74,15 +73,6 @@ export const Route = createFileRoute('/settings')({
       [updateSetting]
     )
 
-    const handleSeoHistoryDirChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value
-        setSeoHistoryDir(val)
-        updateSetting('seoHistoryDir', val)
-      },
-      [updateSetting]
-    )
-
     const handleDefaultUserAgentChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value
@@ -91,6 +81,12 @@ export const Route = createFileRoute('/settings')({
       },
       [updateSetting]
     )
+
+    const handleOpenConfigDir = useCallback(() => {
+      if (configDir) {
+        window.logsApi.openPath(configDir).catch(console.error)
+      }
+    }, [configDir])
 
     const handleOpenDataDir = useCallback(() => {
       if (dataDir) {
@@ -197,44 +193,54 @@ export const Route = createFileRoute('/settings')({
           )}
         </section>
 
+        {/* Config Directory */}
+        <section className="pb-[40px]">
+          <h2 className="font-headline text-[12px] uppercase tracking-[3px] text-black pb-[16px] border-b-[3px] border-black mb-[16px]">
+            {m.settings_config_dir_title()}
+          </h2>
+          {loaded && configDir && (
+            <div>
+              <p className="font-mono text-[12px] leading-[1.5] text-black/50 pb-[8px]">
+                {m.settings_config_dir_desc()}
+              </p>
+              <div className="flex items-center gap-[12px]">
+                <span className="font-mono text-[13px] leading-[1.5] text-black/70 truncate flex-1 min-w-0">
+                  {configDir}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleOpenConfigDir}
+                  className="shrink-0 font-mono text-[13px] leading-[1.5] py-[6px] px-[14px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black"
+                >
+                  {m.settings_config_dir_open()}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Data Directory */}
         <section className="pb-[40px]">
           <h2 className="font-headline text-[12px] uppercase tracking-[3px] text-black pb-[16px] border-b-[3px] border-black mb-[16px]">
             {m.settings_data_dir_title()}
           </h2>
-          {loaded && (
+          {loaded && dataDir && (
             <div>
-              <label htmlFor="settings-data-dir" className={labelCls}>
-                {m.settings_data_dir_label()}
-              </label>
-              <input
-                ref={seoHistoryDirRef}
-                id="settings-data-dir"
-                type="text"
-                className={`max-w-[420px] ${inputCls}`}
-                placeholder="~/.rivo"
-                value={seoHistoryDir}
-                onChange={handleSeoHistoryDirChange}
-              />
-              <p className="font-mono text-[12px] leading-[1.5] text-black/50 pt-[4px]">
-                {m.settings_data_dir_hint()}
+              <p className="font-mono text-[12px] leading-[1.5] text-black/50 pb-[8px]">
+                {m.settings_data_dir_desc()}
               </p>
-
-              {/* System data directory with Open button */}
-              {dataDir && (
-                <div className="flex items-center gap-[12px] pt-[12px]">
-                  <span className="font-mono text-[13px] leading-[1.5] text-black/70 truncate flex-1 min-w-0">
-                    {dataDir}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleOpenDataDir}
-                    className="shrink-0 font-mono text-[13px] leading-[1.5] py-[6px] px-[14px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black"
-                  >
-                    {m.settings_data_dir_open()}
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-[12px]">
+                <span className="font-mono text-[13px] leading-[1.5] text-black/70 truncate flex-1 min-w-0">
+                  {dataDir}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleOpenDataDir}
+                  className="shrink-0 font-mono text-[13px] leading-[1.5] py-[6px] px-[14px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black"
+                >
+                  {m.settings_data_dir_open()}
+                </button>
+              </div>
             </div>
           )}
         </section>

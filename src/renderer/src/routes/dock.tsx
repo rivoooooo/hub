@@ -169,7 +169,7 @@ export const Route = createFileRoute('/dock')({
             className="font-body text-[12px] uppercase tracking-[1px] border-[3px] border-black px-[8px] py-[4px] cursor-pointer hover:bg-black hover:text-white transition-colors duration-[50ms]"
             onClick={() => navigate({ to: '/' })}
           >
-            ← {m.back_to_home()}
+            {m.back_to_home()}
           </button>
         </div>
 

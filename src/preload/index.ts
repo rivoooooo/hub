@@ -69,7 +69,8 @@ export interface BridgeFullConfig {
 // ---------------------------------------------------------------------------
 
 const api = {
-  openRoute: (route: string): void => ipcRenderer.send('open-route', route)
+  openRoute: (route: string): void => ipcRenderer.send('open-route', route),
+  getConfigDir: (): Promise<string> => ipcRenderer.invoke('config-dir:get')
 }
 
 const browserApi = {
@@ -192,7 +193,8 @@ const logsApi = {
 const seoApi = {
   analyze: (url: string): Promise<SeoResult> => ipcRenderer.invoke('seo:analyze', url),
   getHistory: (): Promise<HistoryEntry[]> => ipcRenderer.invoke('seo:get-history'),
-  clearHistory: (): Promise<void> => ipcRenderer.invoke('seo:clear-history')
+  clearHistory: (): Promise<void> => ipcRenderer.invoke('seo:clear-history'),
+  getDataDir: (): Promise<string> => ipcRenderer.invoke('seo:get-data-dir')
 }
 
 // ---------------------------------------------------------------------------
@@ -279,7 +281,6 @@ interface SettingsData {
   toolbarVisible: boolean
   proxyEnabled: boolean
   proxyUrl: string
-  seoHistoryDir: string
   defaultUserAgent: string
 }
 

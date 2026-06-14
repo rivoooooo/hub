@@ -1,7 +1,6 @@
 import { ipcMain, app } from 'electron'
 import * as cheerio from 'cheerio'
 import { fetchText } from './fetcher'
-import * as settings from './settings-store'
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { getLogger } from './logger'
@@ -58,6 +57,10 @@ export function registerSeoHandlers(): void {
 
   ipcMain.handle('seo:clear-history', async (): Promise<void> => {
     clearHistory()
+  })
+
+  ipcMain.handle('seo:get-data-dir', async (): Promise<string> => {
+    return getDataDir()
   })
 }
 
@@ -255,29 +258,18 @@ export interface HistoryEntry {
   result: SeoResult
 }
 
-/** Resolve the data directory from settings (expands ~, falls back to ~/.rivo). */
-function resolveDataDir(): string {
-  const configured = settings.get('seoHistoryDir')
-  if (configured) {
-    const trimmed = configured.trim()
-    if (trimmed) {
-      // Expand leading ~ to home directory
-      let resolved = trimmed
-      if (resolved.startsWith('~')) {
-        resolved = resolved.replace('~', app.getPath('home'))
-      }
-      // Reject paths that are still empty or relative-only after expansion
-      if (resolved) {
-        return resolved
-      }
-    }
-  }
-  return join(app.getPath('home'), '.rivo')
+/**
+ * Return the canonical data directory for all operational records
+ * (SEO history, logs metadata, etc.). Always uses the system-assigned
+ * userData directory — not user-configurable.
+ */
+export function getDataDir(): string {
+  return app.getPath('userData')
 }
 
 /** Ensure the seo history subdirectory exists and return its path. */
 function ensureHistoryDir(): string {
-  const dataDir = resolveDataDir()
+  const dataDir = getDataDir()
   const dir = join(dataDir, 'seo-history')
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })

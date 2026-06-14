@@ -1,6 +1,6 @@
-import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
+import { getConfigDir } from './config-dir'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,7 +31,7 @@ export interface DockApp {
 // Defaults & persistence
 // ---------------------------------------------------------------------------
 
-const APPS_FILE = join(app.getPath('userData'), 'apps.json')
+const APPS_FILE = join(getConfigDir(), 'apps.json')
 
 const DEFAULT_WINDOW_CONFIG: DockWindowConfig = {
   width: 1024,

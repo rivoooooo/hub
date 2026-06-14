@@ -25,7 +25,6 @@ interface SettingsData {
   toolbarVisible: boolean
   proxyEnabled: boolean
   proxyUrl: string
-  seoHistoryDir: string
   browserUserAgent: string
   defaultUserAgent: string
 }
@@ -135,6 +134,7 @@ interface SeoApi {
   analyze: (url: string) => Promise<SeoResult>
   getHistory: () => Promise<HistoryEntry[]>
   clearHistory: () => Promise<void>
+  getDataDir: () => Promise<string>
 }
 
 // --- Dock types ---
@@ -232,6 +232,7 @@ declare global {
     electron: ElectronAPI
     api: {
       openRoute: (route: string) => void
+      getConfigDir: () => Promise<string>
     }
     browserApi: BrowserApi
     bridgeApi: BridgeApi

@@ -5,6 +5,7 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import type { DockApp } from './apps-store'
 import { getLogger } from './logger'
+import { getConfigDir } from './config-dir'
 
 /**
  * Manages lifecycle of independent dock app windows.
@@ -52,7 +53,9 @@ export class DockWindowManager {
         '--app-name',
         dockApp.name,
         '--user-data-path',
-        app.getPath('userData')
+        app.getPath('userData'),
+        '--config-dir',
+        getConfigDir()
       ],
       {
         stdio: ['ignore', 'pipe', 'pipe'],

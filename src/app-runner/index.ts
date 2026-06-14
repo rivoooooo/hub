@@ -7,7 +7,7 @@
  * icon (`windowOpts.icon` / `app.dock.setIcon`), and window title to the
  * dock app's configured name, giving every app an independent identity.
  *
- * Usage:  --app-runner --app-id <uuid> --app-name <name> --user-data-path <path>
+ * Usage:  --app-runner --app-id <uuid> --app-name <name> --user-data-path <path> --config-dir <path>
  *
  * The app config is read from the shared apps.json (written by apps-store.ts).
  */
@@ -45,6 +45,10 @@ if (APP_NAME) {
 const userDataIndex = process.argv.indexOf('--user-data-path')
 const USER_DATA_PATH = userDataIndex !== -1 ? process.argv[userDataIndex + 1] : undefined
 
+// Read the config directory from the parent process (where apps.json lives)
+const configDirIndex = process.argv.indexOf('--config-dir')
+const CONFIG_DIR = configDirIndex !== -1 ? process.argv[configDirIndex + 1] : undefined
+
 // ---------------------------------------------------------------------------
 // Read app config from the shared apps.json
 // ---------------------------------------------------------------------------
@@ -68,8 +72,8 @@ interface DockApp {
   createdAt: number
 }
 
-function readAppConfig(id: string, userDataPath: string): DockApp | null {
-  const appsFile = join(userDataPath, 'apps.json')
+function readAppConfig(id: string, configDir: string): DockApp | null {
+  const appsFile = join(configDir, 'apps.json')
   if (!existsSync(appsFile)) {
     getLogger().error(`Apps.json not found at ${appsFile}`)
     return null
@@ -382,7 +386,7 @@ app.whenReady().then(async () => {
     // Set a unique AppUserModelId so the taskbar entry is fully independent
     app.setAppUserModelId(`com.electron.dev-browser.app-runner.${APP_ID}`)
   }
-  const appCfg = readAppConfig(APP_ID!, USER_DATA_PATH ?? app.getPath('userData'))
+  const appCfg = readAppConfig(APP_ID!, CONFIG_DIR ?? USER_DATA_PATH ?? app.getPath('userData'))
   if (!appCfg) {
     getLogger().error(`App ${APP_ID} not found in apps.json`)
     app.quit()
