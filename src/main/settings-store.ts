@@ -11,13 +11,15 @@ export interface SettingsData {
   toolbarVisible: boolean
   proxyEnabled: boolean
   proxyUrl: string
+  seoHistoryDir: string
 }
 
 const DEFAULTS: SettingsData = {
   browserTitleBarMode: 'hidden',
   toolbarVisible: false,
   proxyEnabled: false,
-  proxyUrl: ''
+  proxyUrl: '',
+  seoHistoryDir: ''
 }
 
 let cache: SettingsData | null = null

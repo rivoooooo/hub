@@ -23,6 +23,7 @@ interface SettingsData {
   toolbarVisible: boolean
   proxyEnabled: boolean
   proxyUrl: string
+  seoHistoryDir: string
 }
 
 interface SettingsApi {
@@ -112,12 +113,24 @@ interface SeoResult {
   iconHref: string | null
   og: Record<string, string>
   twitter: Record<string, string>
+  fb: Record<string, string>
   headings: { level: number; text: string }[]
   issues: string[]
 }
 
+interface HistoryEntry {
+  id: string
+  url: string
+  timestamp: number
+  title: string | null
+  favicon: string | null
+  result: SeoResult
+}
+
 interface SeoApi {
   analyze: (url: string) => Promise<SeoResult>
+  getHistory: () => Promise<HistoryEntry[]>
+  clearHistory: () => Promise<void>
 }
 
 declare global {

@@ -20,12 +20,22 @@ interface SeoResult {
   iconHref: string | null
   og: Record<string, string>
   twitter: Record<string, string>
+  fb: Record<string, string>
   headings: { level: number; text: string }[]
   issues: string[]
 }
 
 interface SeoSearchParams {
   url?: string
+}
+
+interface HistoryEntry {
+  id: string
+  url: string
+  timestamp: number
+  title: string | null
+  favicon: string | null
+  result: SeoResult
 }
 
 // ---------------------------------------------------------------------------
@@ -71,7 +81,27 @@ function SeoPage(): React.JSX.Element {
   const [result, setResult] = useState<SeoResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [showHistorySidebar, setShowHistorySidebar] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const entries = await window.seoApi.getHistory()
+      setHistory(entries)
+    } catch {
+      // silently fail
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
+  // Load history on mount
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
 
   // Auto-analyze when url search param is present
   useEffect(() => {
@@ -82,64 +112,175 @@ function SeoPage(): React.JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchUrl])
 
-  const analyzeUrl = useCallback(async (url: string) => {
-    if (!url.trim()) return
-    setLoading(true)
-    setError(null)
-    setResult(null)
+  const analyzeUrl = useCallback(
+    async (url: string) => {
+      if (!url.trim()) return
+      setLoading(true)
+      setError(null)
+      setResult(null)
 
-    try {
-      const res = await window.seoApi.analyze(url)
-      setResult(res)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setError(msg)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      try {
+        const res = await window.seoApi.analyze(url)
+        setResult(res)
+        // Refresh history after new analysis
+        loadHistory()
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setError(msg)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loadHistory]
+  )
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
-      // Sync search param
+      // Sync search param — the useEffect on searchUrl will trigger analysis
       navigate({ to: '/seo', search: { url: inputUrl.trim() || undefined } })
-      analyzeUrl(inputUrl)
     },
-    [inputUrl, navigate, analyzeUrl]
+    [inputUrl, navigate]
   )
 
+  const handleHistoryClick = useCallback(
+    (entry: HistoryEntry) => {
+      setInputUrl(entry.url)
+      navigate({ to: '/seo', search: { url: entry.url || undefined } })
+      // Show the saved result directly without re-fetching
+      setResult(entry.result)
+      setError(null)
+    },
+    [navigate]
+  )
+
+  const handleClearHistory = useCallback(async () => {
+    try {
+      await window.seoApi.clearHistory()
+      setHistory([])
+    } catch {
+      // silently fail
+    }
+  }, [])
+
   return (
-    <div className="pt-[120px] px-[24px] pb-[80px] max-w-[960px]">
-      <h1 className="font-headline text-[64px] leading-none text-black pb-[8px]">
-        {m.seo_title()}
-      </h1>
-      <p className="font-mono text-[15px] leading-[1.5] text-black pb-[32px]">{m.seo_subtitle()}</p>
+    <div className="flex min-h-screen">
+      {/* Main content */}
+      <div className="flex-1 pt-[120px] pb-[80px] overflow-y-auto transition-all duration-[200ms]">
+        <div className="mx-auto max-w-[960px] px-[24px]">
+          <div className="flex items-center justify-between pb-[8px]">
+            <div>
+              <h1 className="font-headline text-[64px] leading-none text-black">{m.seo_title()}</h1>
+              <p className="font-mono text-[15px] leading-[1.5] text-black pt-[4px]">
+                {m.seo_subtitle()}
+              </p>
+            </div>
+            <button
+              className="font-body text-[14px] font-semibold uppercase tracking-[2px] py-[10px] px-[24px] border-[3px] border-black cursor-pointer transition-colors duration-[50ms] active:border-[5px] bg-black text-white hover:bg-white hover:text-black"
+              onClick={() => setShowHistorySidebar(true)}
+            >
+              {m.seo_history()}
+            </button>
+          </div>
 
-      {/* URL Input */}
-      <form onSubmit={handleSubmit} className="flex gap-[8px] pb-[40px]">
-        <input
-          ref={inputRef}
-          type="text"
-          className={inputCls}
-          placeholder={m.seo_url_placeholder()}
-          value={inputUrl}
-          onChange={(e) => setInputUrl(e.target.value)}
-        />
-        <button type="submit" className={btnPrimary} disabled={loading}>
-          {loading ? m.seo_analyzing_btn() : m.seo_analyze_btn()}
-        </button>
-      </form>
+          {/* URL Input */}
+          <form onSubmit={handleSubmit} className="flex gap-[8px] pb-[40px] pt-[24px]">
+            <input
+              ref={inputRef}
+              type="text"
+              className={inputCls}
+              placeholder={m.seo_url_placeholder()}
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
+            />
+            <button type="submit" className={btnPrimary} disabled={loading}>
+              {loading ? m.seo_analyzing_btn() : m.seo_analyze_btn()}
+            </button>
+          </form>
 
-      {/* Error */}
-      {error && (
-        <div className="font-mono text-[14px] text-black border-[3px] border-error p-[16px] mb-[32px] bg-error/5">
-          {error}
+          {/* Error */}
+          {error && (
+            <div className="font-mono text-[14px] text-black border-[3px] border-error p-[16px] mb-[32px] bg-error/5">
+              {error}
+            </div>
+          )}
+
+          {/* Results */}
+          {result && !loading && <SeoResults result={result} />}
         </div>
-      )}
+      </div>
 
-      {/* Results */}
-      {result && !loading && <SeoResults result={result} />}
+      {/* Right sidebar — history */}
+      <div
+        className={`transition-all duration-[200ms] overflow-hidden h-screen bg-white border-l-[3px] border-black sticky top-0 ${
+          showHistorySidebar ? 'w-[480px] max-w-[92vw]' : 'w-0 border-l-0'
+        }`}
+      >
+        <div className="w-[480px] max-w-[92vw] h-full overflow-y-auto">
+          <div className="px-[24px] pt-16">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-[16px]">
+              <span className="font-headline text-[14px] uppercase tracking-wider text-black">
+                {m.seo_history()}
+              </span>
+              <div className="flex items-center gap-[8px]">
+                {history.length > 0 && (
+                  <button
+                    type="button"
+                    className="font-mono text-[11px] underline text-black hover:text-error"
+                    onClick={handleClearHistory}
+                  >
+                    {m.seo_history_clear()}
+                  </button>
+                )}
+                <button
+                  className="font-body text-[20px] leading-none border-[3px] border-black w-[32px] h-[32px] flex items-center justify-center cursor-pointer hover:bg-black hover:text-white transition-colors duration-[50ms]"
+                  onClick={() => setShowHistorySidebar(false)}
+                  title="Close"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            {historyLoading ? (
+              <p className="font-mono text-[14px] text-black/50 italic">Loading…</p>
+            ) : history.length === 0 ? (
+              <p className="font-mono text-[14px] text-black/50 italic">{m.seo_history_empty()}</p>
+            ) : (
+              <div className="space-y-[8px]">
+                {history.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-[12px] py-[8px] px-[12px] border-[2px] border-black/20 cursor-pointer transition-colors duration-[50ms] hover:bg-[#e8e8e8] hover:border-black"
+                    onClick={() => {
+                      handleHistoryClick(entry)
+                      setShowHistorySidebar(false)
+                    }}
+                  >
+                    {/* Favicon */}
+                    <FaviconIcon url={entry.favicon ?? ''} />
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono text-[14px] leading-[1.4] text-black truncate">
+                        {entry.title ?? entry.url}
+                      </div>
+                      <div className="font-mono text-[11px] leading-[1.4] text-black/50 truncate">
+                        {entry.url}
+                      </div>
+                    </div>
+                    {/* Timestamp */}
+                    <span className="font-mono text-[11px] text-black/40 shrink-0">
+                      {formatTimestamp(entry.timestamp)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -232,7 +373,22 @@ function SeoResults({ result }: { result: SeoResult }): React.JSX.Element {
       {Object.keys(result.og).length > 0 && (
         <section>
           <h2 className={sectionTitle}>{m.seo_og()}</h2>
-          {Object.entries(result.og).map(([key, val]) => (
+          <MetaList title={m.seo_og_standard()} items={ogStandardItems(result.og)} />
+          <MetaList title={m.seo_og_image()} items={ogPrefixedItems(result.og, 'image')} />
+          <MetaList title={m.seo_og_audio()} items={ogPrefixedItems(result.og, 'audio')} />
+          <MetaList title={m.seo_og_video()} items={ogPrefixedItems(result.og, 'video')} />
+          {(() => {
+            const other = ogOtherItems(result.og)
+            return other.length > 0 ? <MetaList title={m.seo_og_other()} items={other} /> : null
+          })()}
+        </section>
+      )}
+
+      {/* Facebook */}
+      {Object.keys(result.fb).length > 0 && (
+        <section>
+          <h2 className={sectionTitle}>{m.seo_fb()}</h2>
+          {Object.entries(result.fb).map(([key, val]) => (
             <MetaRow key={key} label={key} value={val} />
           ))}
         </section>
@@ -242,9 +398,20 @@ function SeoResults({ result }: { result: SeoResult }): React.JSX.Element {
       {Object.keys(result.twitter).length > 0 && (
         <section>
           <h2 className={sectionTitle}>{m.seo_twitter()}</h2>
-          {Object.entries(result.twitter).map(([key, val]) => (
-            <MetaRow key={key} label={key} value={val} />
-          ))}
+          <MetaList title={m.seo_twitter_core()} items={twitterCoreItems(result.twitter)} />
+          <MetaList title={m.seo_twitter_override()} items={twitterOverrideItems(result.twitter)} />
+          <MetaList
+            title={m.seo_twitter_app()}
+            items={twitterPrefixedItems(result.twitter, 'app')}
+          />
+          <MetaList
+            title={m.seo_twitter_player()}
+            items={twitterPrefixedItems(result.twitter, 'player')}
+          />
+          {(() => {
+            const other = twitterOtherItems(result.twitter)
+            return other.length > 0 ? <MetaList title={m.seo_og_other()} items={other} /> : null
+          })()}
         </section>
       )}
     </div>
@@ -262,6 +429,86 @@ function MetaRow({ label, value }: { label: string; value: string | null }): Rea
         {label}
       </span>
       <span className={`${valueCls} ${value ? '' : 'text-black/30 italic'}`}>{value ?? '—'}</span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Categorized display helpers
+// ---------------------------------------------------------------------------
+
+const OG_STANDARD_KEYS = new Set([
+  'title',
+  'type',
+  'url',
+  'image',
+  'description',
+  'site_name',
+  'locale',
+  'locale:alternate',
+  'determiner'
+])
+
+const TWITTER_CORE_KEYS = new Set(['card', 'site', 'creator'])
+const TWITTER_OVERRIDE_KEYS = new Set(['title', 'description', 'image', 'image:alt'])
+
+function ogStandardItems(og: Record<string, string>): [string, string][] {
+  return Object.entries(og).filter(([k]) => OG_STANDARD_KEYS.has(k))
+}
+
+function ogPrefixedItems(og: Record<string, string>, prefix: string): [string, string][] {
+  return Object.entries(og).filter(([k]) => k.startsWith(prefix + ':'))
+}
+
+function ogOtherItems(og: Record<string, string>): [string, string][] {
+  const excluded = new Set<string>()
+  for (const k of OG_STANDARD_KEYS) excluded.add(k)
+  for (const k of Object.keys(og)) {
+    if (k.startsWith('image:') || k.startsWith('audio:') || k.startsWith('video:')) {
+      excluded.add(k)
+    }
+  }
+  return Object.entries(og).filter(([k]) => !excluded.has(k))
+}
+
+function twitterCoreItems(tw: Record<string, string>): [string, string][] {
+  return Object.entries(tw).filter(([k]) => TWITTER_CORE_KEYS.has(k))
+}
+
+function twitterOverrideItems(tw: Record<string, string>): [string, string][] {
+  return Object.entries(tw).filter(([k]) => TWITTER_OVERRIDE_KEYS.has(k))
+}
+
+function twitterPrefixedItems(tw: Record<string, string>, prefix: string): [string, string][] {
+  return Object.entries(tw).filter(([k]) => k.startsWith(prefix + ':'))
+}
+
+function twitterOtherItems(tw: Record<string, string>): [string, string][] {
+  const excluded = new Set<string>()
+  for (const k of TWITTER_CORE_KEYS) excluded.add(k)
+  for (const k of TWITTER_OVERRIDE_KEYS) excluded.add(k)
+  for (const k of Object.keys(tw)) {
+    if (k.startsWith('app:') || k.startsWith('player:')) excluded.add(k)
+  }
+  return Object.entries(tw).filter(([k]) => !excluded.has(k))
+}
+
+function MetaList({
+  title,
+  items
+}: {
+  title: string
+  items: [string, string][]
+}): React.JSX.Element | null {
+  if (items.length === 0) return null
+  return (
+    <div className="mb-[16px]">
+      <h3 className="font-mono text-[11px] uppercase tracking-[2px] text-black/50 pb-[6px] border-b-[1px] border-black/10 mb-[4px]">
+        {title}
+      </h3>
+      {items.map(([key, val]) => (
+        <MetaRow key={key} label={key} value={val} />
+      ))}
     </div>
   )
 }
@@ -290,4 +537,14 @@ function FaviconIcon({ url }: { url: string }): React.JSX.Element {
       onError={() => setFailed(true)}
     />
   )
+}
+
+// ---------------------------------------------------------------------------
+// Timestamp formatting
+// ---------------------------------------------------------------------------
+
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

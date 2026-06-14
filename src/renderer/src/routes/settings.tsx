@@ -30,14 +30,17 @@ export const Route = createFileRoute('/settings')({
     const { locale, setLocaleAndRerender } = useLocale()
     const [proxyEnabled, setProxyEnabled] = useState(false)
     const [proxyUrl, setProxyUrl] = useState('')
+    const [seoHistoryDir, setSeoHistoryDir] = useState('')
     const [loaded, setLoaded] = useState(false)
     const proxyUrlRef = useRef<HTMLInputElement>(null)
+    const seoHistoryDirRef = useRef<HTMLInputElement>(null)
 
     // Load current settings once
     useEffect(() => {
       window.settingsApi.get().then((s) => {
         setProxyEnabled(s.proxyEnabled)
         setProxyUrl(s.proxyUrl)
+        setSeoHistoryDir(s.seoHistoryDir)
         setLoaded(true)
       })
     }, [])
@@ -60,6 +63,15 @@ export const Route = createFileRoute('/settings')({
         const val = e.target.value
         setProxyUrl(val)
         updateSetting('proxyUrl', val)
+      },
+      [updateSetting]
+    )
+
+    const handleSeoHistoryDirChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value
+        setSeoHistoryDir(val)
+        updateSetting('seoHistoryDir', val)
       },
       [updateSetting]
     )
@@ -154,6 +166,32 @@ export const Route = createFileRoute('/settings')({
                 </p>
               </div>
             </>
+          )}
+        </section>
+
+        {/* Data Directory */}
+        <section className="pb-[40px]">
+          <h2 className="font-headline text-[12px] uppercase tracking-[3px] text-black pb-[16px] border-b-[3px] border-black mb-[16px]">
+            {m.settings_data_dir_title()}
+          </h2>
+          {loaded && (
+            <div>
+              <label htmlFor="settings-data-dir" className={labelCls}>
+                {m.settings_data_dir_label()}
+              </label>
+              <input
+                ref={seoHistoryDirRef}
+                id="settings-data-dir"
+                type="text"
+                className={`max-w-[420px] ${inputCls}`}
+                placeholder="~/.rivo"
+                value={seoHistoryDir}
+                onChange={handleSeoHistoryDirChange}
+              />
+              <p className="font-mono text-[12px] leading-[1.5] text-black/50 pt-[4px]">
+                {m.settings_data_dir_hint()}
+              </p>
+            </div>
           )}
         </section>
 

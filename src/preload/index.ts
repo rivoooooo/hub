@@ -108,7 +108,19 @@ const browserControls = {
 // ---------------------------------------------------------------------------
 
 const seoApi = {
-  analyze: (url: string): Promise<SeoResult> => ipcRenderer.invoke('seo:analyze', url)
+  analyze: (url: string): Promise<SeoResult> => ipcRenderer.invoke('seo:analyze', url),
+  getHistory: (): Promise<HistoryEntry[]> => ipcRenderer.invoke('seo:get-history'),
+  clearHistory: (): Promise<void> => ipcRenderer.invoke('seo:clear-history')
+}
+
+// Inline copy of HistoryEntry
+interface HistoryEntry {
+  id: string
+  url: string
+  timestamp: number
+  title: string | null
+  favicon: string | null
+  result: SeoResult
 }
 
 interface BrowserState {
@@ -134,6 +146,7 @@ interface SeoResult {
   iconHref: string | null
   og: Record<string, string>
   twitter: Record<string, string>
+  fb: Record<string, string>
   headings: { level: number; text: string }[]
   issues: string[]
 }
@@ -145,6 +158,7 @@ interface SettingsData {
   toolbarVisible: boolean
   proxyEnabled: boolean
   proxyUrl: string
+  seoHistoryDir: string
 }
 
 // ---------------------------------------------------------------------------
