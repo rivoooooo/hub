@@ -26,6 +26,7 @@ import {
   realpathSync,
   statSync,
   unlinkSync,
+  copyFileSync,
   createWriteStream
 } from 'fs'
 import { join, resolve } from 'path'
@@ -36,12 +37,13 @@ import { URL } from 'url'
 import { fileURLToPath } from 'url'
 
 const __dirname = resolve(fileURLToPath(import.meta.url), '..')
+const projectRoot = resolve(__dirname, '..')
+const CACHE_DIR = join(projectRoot, '.cache', 'electron')
 
 // ---- helpers ----
 
 function resolveElectronDir() {
   // Resolve the real path of node_modules/electron (handles pnpm symlinks)
-  const projectRoot = resolve(__dirname, '..')
   const electronDir = join(projectRoot, 'node_modules', 'electron')
   const real = realpathSync(electronDir)
   console.log(`[download-electron] Electron package: ${real}`)
@@ -129,53 +131,51 @@ function downloadFile(url, destPath) {
 
     const file = createWriteStream(destPath)
 
-    httpMod
-      .get(url, { headers: { 'User-Agent': 'electron-download-script' } }, (res) => {
-        // Follow redirects
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          file.close()
-          unlinkSync(destPath)
-          console.log(`[download-electron] Redirecting to ${res.headers.location}`)
-          return resolve(downloadFile(res.headers.location, destPath))
-        }
-
-        if (res.statusCode !== 200) {
-          file.close()
-          unlinkSync(destPath)
-          return reject(new Error(`Download failed: HTTP ${res.statusCode} ${res.statusMessage}`))
-        }
-
-        const total = parseInt(res.headers['content-length'], 10)
-        let downloaded = 0
-        let lastLog = 0
-
-        res.on('data', (chunk) => {
-          downloaded += chunk.length
-          if (total) {
-            const pct = ((downloaded / total) * 100).toFixed(1)
-            const now = Date.now()
-            if (now - lastLog > 1000) {
-              process.stdout.write(
-                `\r  ${pct}% (${(downloaded / 1024 / 1024).toFixed(1)} MB / ${(total / 1024 / 1024).toFixed(1)} MB)`
-              )
-              lastLog = now
-            }
-          }
-        })
-
-        res.pipe(file)
-
-        file.on('finish', () => {
-          file.close()
-          process.stdout.write('\r  ✓ Download complete\n')
-          resolve()
-        })
-      })
-      .on('error', (err) => {
+    httpMod(url, { headers: { 'User-Agent': 'electron-download-script' } }, (res) => {
+      // Follow redirects
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         file.close()
-        if (existsSync(destPath)) unlinkSync(destPath)
-        reject(err)
+        unlinkSync(destPath)
+        console.log(`[download-electron] Redirecting to ${res.headers.location}`)
+        return resolve(downloadFile(res.headers.location, destPath))
+      }
+
+      if (res.statusCode !== 200) {
+        file.close()
+        unlinkSync(destPath)
+        return reject(new Error(`Download failed: HTTP ${res.statusCode} ${res.statusMessage}`))
+      }
+
+      const total = parseInt(res.headers['content-length'], 10)
+      let downloaded = 0
+      let lastLog = 0
+
+      res.on('data', (chunk) => {
+        downloaded += chunk.length
+        if (total) {
+          const pct = ((downloaded / total) * 100).toFixed(1)
+          const now = Date.now()
+          if (now - lastLog > 1000) {
+            process.stdout.write(
+              `\r  ${pct}% (${(downloaded / 1024 / 1024).toFixed(1)} MB / ${(total / 1024 / 1024).toFixed(1)} MB)`
+            )
+            lastLog = now
+          }
+        }
       })
+
+      res.pipe(file)
+
+      file.on('finish', () => {
+        file.close()
+        process.stdout.write('\r  ✓ Download complete\n')
+        resolve()
+      })
+    }).on('error', (err) => {
+      file.close()
+      if (existsSync(destPath)) unlinkSync(destPath)
+      reject(err)
+    })
   })
 }
 
@@ -291,21 +291,39 @@ async function main() {
     ? `${mirror}v${version}/${filename}`
     : `${mirror}/v${version}/${filename}`
 
-  // ---- download ----
   const zipPath = join(distDir, filename)
-  try {
-    await downloadFile(downloadUrl, zipPath)
-  } catch (err) {
-    console.error(`\n[download-electron] ✗ Download failed: ${err.message}`)
-    console.error(`\n  Suggestions:`)
-    console.error(`  1. Set a different mirror:`)
-    console.error(
-      `     ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ node scripts/download-electron.mjs`
-    )
-    console.error(`  2. Or download manually from:`)
-    console.error(`     ${downloadUrl}`)
-    console.error(`     and extract to: ${distDir}`)
-    process.exit(1)
+
+  // ---- check cache ----
+  const cachedZip = join(CACHE_DIR, filename)
+  if (existsSync(cachedZip)) {
+    console.log(`[download-electron] Using cached:\n  ${cachedZip}`)
+    copyFileSync(cachedZip, zipPath)
+    console.log('[download-electron] ✓ Copied from cache')
+  } else {
+    // ---- download ----
+    try {
+      await downloadFile(downloadUrl, zipPath)
+    } catch (err) {
+      console.error(`\n[download-electron] ✗ Download failed: ${err.message}`)
+      console.error(`\n  Suggestions:`)
+      console.error(`  1. Set a different mirror:`)
+      console.error(
+        `     ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ node scripts/download-electron.mjs`
+      )
+      console.error(`  2. Or download manually from:`)
+      console.error(`     ${downloadUrl}`)
+      console.error(`     and extract to: ${distDir}`)
+      process.exit(1)
+    }
+
+    // ---- save to cache ----
+    try {
+      mkdirSync(CACHE_DIR, { recursive: true })
+      copyFileSync(zipPath, cachedZip)
+      console.log(`[download-electron] ✓ Cached to:\n  ${cachedZip}`)
+    } catch (err) {
+      console.warn(`[download-electron] ⚠ Could not cache: ${err.message}`)
+    }
   }
 
   // ---- extract ----

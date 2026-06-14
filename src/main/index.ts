@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { BrowserManager } from './browser-manager'
 import * as settings from './settings-store'
 import * as bridgeStore from './bridge-store'
+import { registerSeoHandlers } from './seo'
 
 // Single instance lock — prevent multiple app instances.
 // On Windows/Linux, clicking the taskbar icon will trigger 'second-instance'
@@ -328,6 +329,9 @@ app.whenReady().then(() => {
         return { error: `unknown mode: ${mode}` }
     }
   })
+
+  // SEO analysis
+  registerSeoHandlers()
 
   createWindow()
   isReady = true

@@ -103,12 +103,40 @@ const browserControls = {
   openDevTools: (): Promise<void> => ipcRenderer.invoke('browser:open-devtools')
 }
 
+// ---------------------------------------------------------------------------
+// SEO API (types live in index.d.ts)
+// ---------------------------------------------------------------------------
+
+const seoApi = {
+  analyze: (url: string): Promise<SeoResult> => ipcRenderer.invoke('seo:analyze', url)
+}
+
 interface BrowserState {
   open: boolean
   url: string
   width: number
   height: number
   locked: boolean
+}
+
+// Inline copy of SeoResult (type also defined in index.d.ts for the renderer)
+interface SeoResult {
+  url: string
+  fetchTimeMs: number
+  contentLength: number
+  title: string | null
+  metaDescription: string | null
+  metaKeywords: string | null
+  metaRobots: string | null
+  canonical: string | null
+  htmlLang: string | null
+  og: Record<string, string>
+  twitter: Record<string, string>
+  headings: { level: number; text: string }[]
+  linkStats: { total: number; internal: number; external: number; hashOnly: number }
+  imagesMissingAlt: number
+  hreflangs: { hreflang: string; href: string }[]
+  issues: string[]
 }
 
 type BrowserTitleBarMode = 'default' | 'hidden' | 'transparent'
@@ -130,6 +158,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('bridgeApi', bridgeApi)
     contextBridge.exposeInMainWorld('settingsApi', settingsApi)
     contextBridge.exposeInMainWorld('browserControls', browserControls)
+    contextBridge.exposeInMainWorld('seoApi', seoApi)
 
     // Bridge IPC channel — used by injected Proxy bridge on target pages
     contextBridge.exposeInMainWorld('__bridgeCall', {
@@ -152,6 +181,8 @@ if (process.contextIsolated) {
   window.settingsApi = settingsApi
   // @ts-expect-error (define in dts)
   window.browserControls = browserControls
+  // @ts-expect-error (define in dts)
+  window.seoApi = seoApi
   // @ts-expect-error (define in dts)
   window.__bridgeCall = {
     call: (path: string[], ...args: unknown[]): Promise<unknown> =>

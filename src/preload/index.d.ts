@@ -94,6 +94,31 @@ interface BrowserControls {
   openDevTools: () => Promise<void>
 }
 
+// --- SEO types ---
+
+interface SeoResult {
+  url: string
+  fetchTimeMs: number
+  contentLength: number
+  title: string | null
+  metaDescription: string | null
+  metaKeywords: string | null
+  metaRobots: string | null
+  canonical: string | null
+  htmlLang: string | null
+  og: Record<string, string>
+  twitter: Record<string, string>
+  headings: { level: number; text: string }[]
+  linkStats: { total: number; internal: number; external: number; hashOnly: number }
+  imagesMissingAlt: number
+  hreflangs: { hreflang: string; href: string }[]
+  issues: string[]
+}
+
+interface SeoApi {
+  analyze: (url: string) => Promise<SeoResult>
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -104,6 +129,7 @@ declare global {
     bridgeApi: BridgeApi
     settingsApi: SettingsApi
     browserControls: BrowserControls
+    seoApi: SeoApi
     /** Bridge IPC channel — used by injected Proxy bridge on target pages */
     __bridgeCall: BridgeCallChannel
   }
