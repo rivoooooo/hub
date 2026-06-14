@@ -30,6 +30,7 @@
     "@tanstack/react-router-devtools": "^1.167.0",
     "cheerio": "^1.2.0",
     "electron-updater": "^6.3.9",
+    "http-proxy-agent": "^9.1.0",
     "https-proxy-agent": "^9.1.0",
     "lucide-react": "^1.18.0",
     "tailwindcss": "^4.3.1"

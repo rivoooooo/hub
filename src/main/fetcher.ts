@@ -1,4 +1,5 @@
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import { HttpProxyAgent } from 'http-proxy-agent'
 import * as http from 'http'
 import * as https from 'https'
 import * as settings from './settings-store'
@@ -30,8 +31,10 @@ export interface FetchTextOptions {
 /**
  * Fetch a URL as text, respecting proxy settings from the app settings-store.
  *
- * When a proxy is configured and enabled, the request is tunnelled through it
- * via HttpsProxyAgent.  Otherwise a plain Node http/https request is used.
+ * Proxy routing:
+ *   - HTTPS target + proxy → `HttpsProxyAgent` (CONNECT tunnel + TLS)
+ *   - HTTP  target + proxy → `HttpProxyAgent`  (forward proxy)
+ *   - No proxy             → plain Node http/https request
  *
  * This runs in the main (Node) process so it never hits CORS errors.
  */
@@ -48,6 +51,11 @@ export async function fetchText(url: string, opts?: FetchTextOptions): Promise<F
     }
   }
 
+  // Normalise proxy URL — add scheme if missing
+  if (proxyUrl && !/^https?:\/\//i.test(proxyUrl)) {
+    proxyUrl = 'http://' + proxyUrl
+  }
+
   if (proxyUrl) {
     console.log(`[fetcher] Using proxy: ${proxyUrl} → ${url}`)
   } else {
@@ -56,8 +64,9 @@ export async function fetchText(url: string, opts?: FetchTextOptions): Promise<F
 
   return new Promise<FetchTextResult>((resolve, reject) => {
     const parsed = new URL(url)
-    const mod = parsed.protocol === 'https:' ? https : http
-    const defaultPort = parsed.protocol === 'https:' ? 443 : 80
+    const isHttpsTarget = parsed.protocol === 'https:'
+    const mod = isHttpsTarget ? https : http
+    const defaultPort = isHttpsTarget ? 443 : 80
 
     const reqOpts: http.RequestOptions = {
       hostname: parsed.hostname,
@@ -72,9 +81,21 @@ export async function fetchText(url: string, opts?: FetchTextOptions): Promise<F
       timeout
     }
 
-    // Attach proxy agent if configured
+    // Attach proxy agent if configured — choose the correct type
     if (proxyUrl) {
-      reqOpts.agent = new HttpsProxyAgent(proxyUrl)
+      try {
+        const parsedProxy = new URL(proxyUrl)
+        const isHttpsProxy = parsedProxy.protocol === 'https:'
+        // Use HttpsProxyAgent when either the proxy itself is HTTPS
+        // or the target is HTTPS (need CONNECT tunnel + TLS).
+        reqOpts.agent =
+          isHttpsTarget || isHttpsProxy
+            ? new HttpsProxyAgent(proxyUrl)
+            : new HttpProxyAgent(proxyUrl)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return reject(new Error(`[fetcher] Failed to create proxy agent for "${proxyUrl}": ${msg}`))
+      }
     }
 
     const req = mod.request(reqOpts, (res) => {
@@ -89,14 +110,30 @@ export async function fetchText(url: string, opts?: FetchTextOptions): Promise<F
           contentType: (res.headers['content-type'] as string) ?? ''
         })
       })
-      res.on('error', reject)
+      res.on('error', (err) => {
+        reject(
+          new Error(
+            `[fetcher] Response stream error for ${url}${proxyUrl ? ` via proxy ${proxyUrl}` : ''}: ${err.message}`
+          )
+        )
+      })
     })
 
     req.on('timeout', () => {
       req.destroy()
-      reject(new Error(`Request timeout after ${timeout}ms`))
+      reject(
+        new Error(
+          `[fetcher] Request timeout after ${timeout}ms for ${url}${proxyUrl ? ` via proxy ${proxyUrl}` : ''}`
+        )
+      )
     })
-    req.on('error', reject)
+
+    req.on('error', (err) => {
+      // Wrap TLS / socket errors with proxy context for easier debugging
+      const ctx = proxyUrl ? ` via proxy ${proxyUrl}` : ''
+      reject(new Error(`[fetcher] ${err.message} (${url}${ctx})`))
+    })
+
     req.end()
   })
 }
