@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import Versions from '@renderer/components/Versions'
-import { m } from '../paraglide/messages.js'
+import { m } from '../../paraglide/messages.js'
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_main/')({
   component: function Dashboard(): React.JSX.Element {
     return (
       <div className="pt-[120px] px-[24px] pb-[180px] h-screen overflow-y-auto">
@@ -66,20 +66,6 @@ export const Route = createFileRoute('/')({
             </span>
             <span className="block font-mono text-[13px] leading-[1.5] opacity-60">
               {m.logs_system_logs_desc()}
-            </span>
-          </Link>
-          <Link
-            to="/bridge-console"
-            className="group block w-[280px] p-[24px] border-[3px] border-black bg-white text-black transition-colors duration-[50ms] hover:bg-black hover:text-white"
-          >
-            <span className="block font-headline text-[12px] uppercase tracking-[3px] text-black group-hover:text-white pb-[8px]">
-              {m.home_module_label()}
-            </span>
-            <span className="block font-headline text-[32px] leading-[1.1] pb-[8px]">
-              {m.bridge_console_card_title()}
-            </span>
-            <span className="block font-mono text-[13px] leading-[1.5] opacity-60">
-              {m.bridge_console_card_desc()}
             </span>
           </Link>
         </div>

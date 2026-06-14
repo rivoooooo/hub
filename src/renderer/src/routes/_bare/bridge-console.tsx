@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
@@ -13,6 +13,8 @@ interface ConsoleEntry {
   path: string
 }
 
+const isMac = /mac/i.test(navigator.platform ?? '')
+
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
@@ -26,7 +28,6 @@ const btnSmall =
 
 export const Route = createFileRoute('/_bare/bridge-console')({
   component: function BridgeConsole(): React.JSX.Element {
-    const navigate = useNavigate()
     const [entries, setEntries] = useState<ConsoleEntry[]>([])
     const [autoScroll, setAutoScroll] = useState(true)
     const [filter, setFilter] = useState<'all' | 'log' | 'warn' | 'error'>('all')
@@ -107,74 +108,85 @@ export const Route = createFileRoute('/_bare/bridge-console')({
     return (
       <div className="h-screen flex flex-col bg-white">
         {/* Header */}
-        <div className="flex items-center justify-between px-[24px] pt-16 pb-[16px] border-b-[3px] border-black">
-          <div className="flex items-center gap-[16px]">
-            <span className="font-headline text-[14px] uppercase tracking-wider text-black">
-              Sandbox Console
-            </span>
-            <span className="font-mono text-[12px] text-black opacity-50">
-              {filtered.length} / {entries.length} entries
-            </span>
-          </div>
-          <div className="flex items-center gap-[8px]">
-            {/* Filter */}
-            <select
-              className="font-mono text-[12px] border-[3px] border-black px-[6px] py-[3px] bg-white text-black outline-none"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as typeof filter)}
+        <header
+          style={
+            {
+              WebkitAppRegion: 'drag',
+              paddingLeft: isMac ? 100 : 0
+            } as React.CSSProperties
+          }
+          className="px-[24px] h-12 border-b-[3px] border-black"
+        >
+          <div className="flex items-center justify-between size-full">
+            <div
+              className="flex items-center gap-[16px]"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
-              <option value="all">all</option>
-              <option value="log">log</option>
-              <option value="warn">warn</option>
-              <option value="error">error</option>
-            </select>
-
-            {/* Auto-scroll toggle */}
-            <label className="flex items-center gap-[4px] cursor-pointer select-none text-[11px] font-body text-black">
-              <span className="relative w-[18px] h-[18px]">
-                <input
-                  type="checkbox"
-                  className="peer w-[18px] h-[18px] border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms] focus:border-[4px]"
-                  checked={autoScroll}
-                  onChange={() => setAutoScroll(!autoScroll)}
-                />
-                <svg
-                  className="absolute inset-0 w-[18px] h-[18px] pointer-events-none hidden peer-checked:block"
-                  viewBox="0 0 20 20"
-                >
-                  <polyline
-                    points="5,10 9,14 15,6"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="3"
-                    strokeLinecap="square"
-                    strokeLinejoin="miter"
-                  />
-                </svg>
+              <span className="font-headline text-[14px] uppercase tracking-wider text-black">
+                Sandbox Console
               </span>
-              auto-scroll
-            </label>
+              <span className="font-mono text-[12px] text-black opacity-50">
+                {filtered.length} / {entries.length} entries
+              </span>
+            </div>
 
-            <button
-              className={`${btnSmall} bg-white text-black hover:bg-black hover:text-white`}
-              onClick={handleRefresh}
+            <div
+              className="flex items-center gap-[8px]"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
-              ↻ Refresh
-            </button>
-            <button
-              className={`${btnSmall} bg-white text-black hover:bg-black hover:text-white`}
-              onClick={handleClear}
-            >
-              ✕ Clear
-            </button>
-            <button
-              className={`${btnSmall} bg-white text-black hover:bg-black hover:text-white`}
-              onClick={() => navigate({ to: '/browser' })}
-            >
-              ← Back
-            </button>
+              {/* Filter */}
+              <select
+                className="font-mono text-[12px] border-[3px] border-black px-[6px] py-[3px] bg-white text-black outline-none"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as typeof filter)}
+              >
+                <option value="all">all</option>
+                <option value="log">log</option>
+                <option value="warn">warn</option>
+                <option value="error">error</option>
+              </select>
+
+              {/* Auto-scroll toggle */}
+              <label className="flex items-center gap-[4px] cursor-pointer select-none text-[11px] font-body text-black">
+                <span className="relative w-[18px] h-[18px]">
+                  <input
+                    type="checkbox"
+                    className="peer w-[18px] h-[18px] border-[3px] border-black bg-white checked:bg-black cursor-pointer appearance-none transition-colors duration-[50ms] focus:border-[4px]"
+                    checked={autoScroll}
+                    onChange={() => setAutoScroll(!autoScroll)}
+                  />
+                  <svg
+                    className="absolute inset-0 w-[18px] h-[18px] pointer-events-none hidden peer-checked:block"
+                    viewBox="0 0 20 20"
+                  >
+                    <polyline
+                      points="5,10 9,14 15,6"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="3"
+                      strokeLinecap="square"
+                      strokeLinejoin="miter"
+                    />
+                  </svg>
+                </span>
+                auto-scroll
+              </label>
+
+              <button
+                className={`${btnSmall} bg-white text-black hover:bg-black hover:text-white`}
+                onClick={handleRefresh}
+              >
+                Refresh
+              </button>
+              <button
+                className={`${btnSmall} bg-white text-black hover:bg-black hover:text-white`}
+                onClick={handleClear}
+              >
+                Clear
+              </button>
+            </div>
           </div>
-        </div>
+        </header>
 
         {/* Entry list */}
         <div ref={listRef} className="flex-1 overflow-y-auto font-mono text-[13px] leading-[1.6]">

@@ -7,3 +7,4 @@ out
 *.log*
 **/routeTree.gen.ts
 .pnpm-store
+*.tsbuildinfo

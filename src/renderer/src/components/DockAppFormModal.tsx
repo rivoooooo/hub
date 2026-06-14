@@ -24,6 +24,7 @@ export interface DockApp {
 
 export interface DockFormValues {
   name: string
+  url: string
   iconDataUrl: string
   windowConfig: DockWindowConfig
   userAgent: string
@@ -59,6 +60,7 @@ export default function DockAppFormModal({
   onClose
 }: DockAppFormModalProps): React.JSX.Element | null {
   const [name, setName] = useState(initialValues.name)
+  const [appUrl, setAppUrl] = useState(initialValues.url)
   const [iconUrl, setIconUrl] = useState(initialValues.iconDataUrl)
   const [width, setWidth] = useState(initialValues.windowConfig.width)
   const [height, setHeight] = useState(initialValues.windowConfig.height)
@@ -75,6 +77,7 @@ export default function DockAppFormModal({
   // Sync form when initialValues change (e.g. editing a different app)
   useEffect(() => {
     setName(initialValues.name)
+    setAppUrl(initialValues.url)
     setIconUrl(initialValues.iconDataUrl)
     setWidth(initialValues.windowConfig.width)
     setHeight(initialValues.windowConfig.height)
@@ -101,6 +104,7 @@ export default function DockAppFormModal({
     setSubmitting(true)
     void onSubmit({
       name,
+      url: appUrl,
       iconDataUrl: iconUrl,
       windowConfig: { width, height, titleBarStyle, frame },
       userAgent,
@@ -113,6 +117,7 @@ export default function DockAppFormModal({
     }).finally(() => setSubmitting(false))
   }, [
     name,
+    appUrl,
     iconUrl,
     width,
     height,
@@ -162,6 +167,21 @@ export default function DockAppFormModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="My App"
+            disabled={submitting}
+          />
+        </div>
+
+        {/* App URL */}
+        <div className="pb-[12px]">
+          <label className="block font-headline text-[12px] uppercase tracking-wider text-black pb-[4px]">
+            {m.dock_install_url()}
+          </label>
+          <input
+            className={`w-full ${inputCls}`}
+            type="url"
+            value={appUrl}
+            onChange={(e) => setAppUrl(e.target.value)}
+            placeholder="https://example.com"
             disabled={submitting}
           />
         </div>

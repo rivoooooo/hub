@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { m } from '../paraglide/messages.js'
+import { m } from '../../paraglide/messages.js'
 
-export const Route = createFileRoute('/about')({
+export const Route = createFileRoute('/_main/about')({
   component: () => (
     <div className="pt-[120px] px-[24px]">
       <h1 className="font-headline text-[64px] leading-none text-black pb-[16px]">

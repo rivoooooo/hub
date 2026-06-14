@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { m } from '../paraglide/messages.js'
-import { useLocale } from '../useLocale'
+import { m } from '../../paraglide/messages.js'
+import { useLocale } from '../../useLocale'
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -25,7 +25,7 @@ const localeOptions: { value: string; labelKey: 'settings_locale_en' | 'settings
 // Route
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/settings')({
+export const Route = createFileRoute('/_main/settings')({
   component: function Settings(): React.JSX.Element {
     const { locale, setLocaleAndRerender } = useLocale()
     const navigate = useNavigate()

@@ -7,7 +7,7 @@
  * then copy the result to out/main/app-runner.js.
  */
 import { execSync } from 'child_process'
-import { copyFileSync, rmSync, existsSync, mkdirSync } from 'fs'
+import { copyFileSync, rmSync, existsSync, mkdirSync, readdirSync } from 'fs'
 import { resolve } from 'path'
 
 const ROOT = process.cwd()
@@ -22,11 +22,15 @@ try {
     { stdio: 'pipe', cwd: ROOT }
   )
 
-  const built = resolve(TMP, 'src/app-runner/index.js')
-  if (!existsSync(built)) {
-    throw new Error(`Expected built file not found: ${built}`)
+  const builtDir = resolve(TMP, 'src/app-runner')
+  if (!existsSync(builtDir)) {
+    throw new Error(`Expected built directory not found: ${builtDir}`)
   }
-  copyFileSync(built, DST)
+  for (const file of readdirSync(builtDir)) {
+    if (file.endsWith('.js')) {
+      copyFileSync(resolve(builtDir, file), resolve(ROOT, 'out/main', file))
+    }
+  }
   console.log(`✓ app-runner built → ${DST}`)
 } finally {
   rmSync(TMP, { recursive: true, force: true })

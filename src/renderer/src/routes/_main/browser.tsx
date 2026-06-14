@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import WindowSizeInput from '@renderer/components/WindowSizeInput'
 import DockAppFormModal, { type DockFormValues } from '@renderer/components/DockAppFormModal'
-import { m } from '../paraglide/messages.js'
+import { m } from '../../paraglide/messages.js'
 
 // ---------------------------------------------------------------------------
 // Bridge tree types — kept in sync with main/bridge-store.ts
@@ -58,7 +58,7 @@ interface BridgeConfig {
 // Route
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/browser')({
+export const Route = createFileRoute('/_main/browser')({
   component: BrowserControl
 })
 
@@ -747,6 +747,7 @@ function BrowserControl(): React.JSX.Element {
   const installInitialValues = useMemo<DockFormValues>(
     () => ({
       name: url.replace(/^https?:\/\//, '').split('/')[0] || url,
+      url,
       iconDataUrl: '',
       windowConfig: {
         width,

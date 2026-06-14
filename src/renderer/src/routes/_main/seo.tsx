@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { m } from '../paraglide/messages.js'
+import { m } from '../../paraglide/messages.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,7 +42,7 @@ interface HistoryEntry {
 // Route
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/seo')({
+export const Route = createFileRoute('/_main/seo')({
   validateSearch: (input: Record<string, unknown>): SeoSearchParams => ({
     url: typeof input.url === 'string' ? input.url : undefined
   }),

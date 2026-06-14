@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useSearch, useNavigate } from '@tanstack/react-router'
 import { useState, useCallback } from 'react'
-import LogViewer from '../components/LogViewer'
-import LogSidebar from '../components/LogSidebar'
-import { m } from '../paraglide/messages.js'
+import LogViewer from '../../components/LogViewer'
+import LogSidebar from '../../components/LogSidebar'
+import { m } from '../../paraglide/messages.js'
 
 // ---------------------------------------------------------------------------
 // Search params schema
@@ -19,7 +19,7 @@ interface LogsSearchParams {
 // Route
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/logs')({
+export const Route = createFileRoute('/_main/logs')({
   validateSearch: (search: Record<string, unknown>): LogsSearchParams => ({
     filepath: typeof search.filepath === 'string' ? search.filepath : undefined,
     watch: search.watch === true || search.watch === 'true',

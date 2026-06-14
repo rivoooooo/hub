@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import type React from 'react'
 import DockAppFormModal, { type DockFormValues } from '@renderer/components/DockAppFormModal'
-import { m } from '../paraglide/messages.js'
-import { getLogger } from '../logger'
+import { m } from '../../paraglide/messages.js'
+import { getLogger } from '../../logger'
 
 // ---------------------------------------------------------------------------
 // AppIcon — icon display for dock app cards
@@ -40,7 +40,7 @@ function AppIcon({ app, isRunning }: { app: DockApp; isRunning: boolean }): Reac
 
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/dock')({
+export const Route = createFileRoute('/_main/dock')({
   component: function DockDesktop(): React.JSX.Element {
     const navigate = useNavigate()
     const [apps, setApps] = useState<DockApp[]>([])
@@ -160,6 +160,7 @@ export const Route = createFileRoute('/dock')({
     const modalInitialValues = createMode
       ? {
           name: '',
+          url: '',
           iconDataUrl: '',
           windowConfig: { width: 1024, height: 768, titleBarStyle: 'hidden' as const, frame: true },
           userAgent: '',
@@ -168,6 +169,7 @@ export const Route = createFileRoute('/dock')({
       : editApp
         ? {
             name: editApp.name,
+            url: editApp.url,
             iconDataUrl: editApp.iconDataUrl,
             windowConfig: { ...editApp.windowConfig },
             userAgent: editApp.userAgent || '',
@@ -175,6 +177,7 @@ export const Route = createFileRoute('/dock')({
           }
         : {
             name: '',
+            url: '',
             iconDataUrl: '',
             windowConfig: {
               width: 1024,
