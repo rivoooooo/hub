@@ -125,6 +125,7 @@ export const Route = createFileRoute('/_bare/bridge-console')({
     const [search, setSearch] = useState('')
     const [sort, setSort] = useState<SortKey>('time-desc')
     const [modeFilter, setModeFilter] = useState('all')
+    const [filtersOpen, setFiltersOpen] = useState(false)
 
     const listRef = useRef<HTMLDivElement>(null)
     const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map())
@@ -366,15 +367,17 @@ export const Route = createFileRoute('/_bare/bridge-console')({
             <span className="font-headline text-[14px] uppercase tracking-[2px] text-black whitespace-nowrap">
               Bridge Call Log
             </span>
-            <span className="font-mono text-[12px] text-black whitespace-nowrap">
-              {total} calls
-            </span>
+          </div>
 
+          <div
+            className="flex items-center gap-[8px]"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
             {/* Search */}
             <input
               type="text"
               placeholder="Search path or URL…"
-              className="font-mono text-[13px] text-black outline-none flex-1 min-w-[80px] max-w-[240px]"
+              className="font-mono text-[13px] text-black outline-none min-w-[80px] max-w-[200px]"
               style={{
                 border: `3px solid ${RB.black}`,
                 padding: '4px 8px',
@@ -389,51 +392,34 @@ export const Route = createFileRoute('/_bare/bridge-console')({
                 e.currentTarget.style.borderWidth = '3px'
               }}
             />
-          </div>
 
-          <div
-            className="flex items-center gap-[8px]"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
-            {/* Sort */}
-            <select
-              className="font-mono text-[11px] uppercase tracking-[1px] text-black outline-none cursor-pointer"
+            {/* Filters / Stats toggle */}
+            <button
+              className="font-body text-[11px] uppercase tracking-[2px] cursor-pointer"
               style={{
                 border: `3px solid ${RB.black}`,
-                padding: '4px 6px',
-                backgroundColor: RB.white,
-                borderRadius: 0
+                padding: '4px 10px',
+                backgroundColor: filtersOpen ? RB.black : RB.white,
+                color: filtersOpen ? RB.white : RB.black
               }}
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-            >
-              <option value="time-desc">Newest</option>
-              <option value="time-asc">Oldest</option>
-              <option value="duration-desc">Slowest</option>
-              <option value="duration-asc">Fastest</option>
-              <option value="path-asc">Path A→Z</option>
-              <option value="path-desc">Path Z→A</option>
-            </select>
-
-            {/* Mode filter */}
-            <select
-              className="font-mono text-[11px] uppercase tracking-[1px] text-black outline-none cursor-pointer"
-              style={{
-                border: `3px solid ${RB.black}`,
-                padding: '4px 6px',
-                backgroundColor: RB.white,
-                borderRadius: 0
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              onMouseEnter={(e) => {
+                if (!filtersOpen) {
+                  e.currentTarget.style.backgroundColor = RB.black
+                  e.currentTarget.style.color = RB.white
+                }
               }}
-              value={modeFilter}
-              onChange={(e) => setModeFilter(e.target.value)}
+              onMouseLeave={(e) => {
+                if (!filtersOpen) {
+                  e.currentTarget.style.backgroundColor = RB.white
+                  e.currentTarget.style.color = RB.black
+                }
+              }}
             >
-              <option value="all">All</option>
-              <option value="custom">Custom</option>
-              <option value="static">Static</option>
-              <option value="declarative">Declarative</option>
-            </select>
+              {filtersOpen ? '▲ Filters' : '▼ Filters'}
+            </button>
 
-            {/* Live Sync toggle — RawBlock status chip */}
+            {/* Live Sync toggle */}
             <button
               className="font-body text-[11px] uppercase tracking-[2px] cursor-pointer"
               style={{
@@ -442,9 +428,7 @@ export const Route = createFileRoute('/_bare/bridge-console')({
                 backgroundColor: liveSync ? RB.green : RB.white,
                 color: liveSync ? RB.white : RB.black
               }}
-              onClick={() => {
-                setLiveSync((prev) => !prev)
-              }}
+              onClick={() => setLiveSync((prev) => !prev)}
               onMouseEnter={(e) => {
                 if (!liveSync) {
                   e.currentTarget.style.backgroundColor = RB.black
@@ -466,7 +450,7 @@ export const Route = createFileRoute('/_bare/bridge-console')({
               {liveSync ? '● Live' : '○ Live'}
             </button>
 
-            {/* Refresh — RawBlock Primary (white bg, black text, 3px border, hover invert) */}
+            {/* Refresh */}
             <button
               className="font-body text-[11px] uppercase tracking-[2px] cursor-pointer"
               style={{
@@ -487,6 +471,8 @@ export const Route = createFileRoute('/_bare/bridge-console')({
             >
               Refresh
             </button>
+
+            {/* Clear All */}
             <button
               className="font-body text-[11px] uppercase tracking-[2px] cursor-pointer"
               style={{
@@ -511,6 +497,88 @@ export const Route = createFileRoute('/_bare/bridge-console')({
             </button>
           </div>
         </header>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Filters / Stats Popover                                         */}
+        {/* ---------------------------------------------------------------- */}
+        {filtersOpen && (
+          <div
+            className="shrink-0"
+            style={{
+              borderBottom: `3px solid ${RB.black}`,
+              backgroundColor: RB.greyLight
+            }}
+          >
+            <div className="flex items-center gap-[24px] px-[24px] py-[8px]">
+              {/* Stats — total + mode breakdown */}
+              <div className="flex items-center gap-[12px] font-mono text-[11px] text-black">
+                <span className="font-bold uppercase tracking-[1px]">Stats:</span>
+                <span>{total} total</span>
+                <span className="text-[#0000FF]">
+                  {entries.filter((e) => e.mode === 'custom').length} custom
+                </span>
+                <span className="text-[#008000]">
+                  {entries.filter((e) => e.mode === 'static').length} static
+                </span>
+                <span className="text-[#FFA500]">
+                  {entries.filter((e) => e.mode === 'declarative').length} declarative
+                </span>
+              </div>
+
+              <div className="w-[3px] self-stretch" style={{ backgroundColor: RB.black }} />
+
+              {/* Sort */}
+              <div className="flex items-center gap-[8px]">
+                <span className="font-mono text-[11px] uppercase tracking-[1px] font-bold text-black">
+                  Sort:
+                </span>
+                <select
+                  className="font-mono text-[11px] uppercase tracking-[1px] text-black outline-none cursor-pointer"
+                  style={{
+                    border: `3px solid ${RB.black}`,
+                    padding: '4px 6px',
+                    backgroundColor: RB.white,
+                    borderRadius: 0
+                  }}
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                >
+                  <option value="time-desc">Newest</option>
+                  <option value="time-asc">Oldest</option>
+                  <option value="duration-desc">Slowest</option>
+                  <option value="duration-asc">Fastest</option>
+                  <option value="path-asc">Path A→Z</option>
+                  <option value="path-desc">Path Z→A</option>
+                </select>
+              </div>
+
+              <div className="w-[3px] self-stretch" style={{ backgroundColor: RB.black }} />
+
+              {/* Mode filter */}
+              <div className="flex items-center gap-[8px]">
+                <span className="font-mono text-[11px] uppercase tracking-[1px] font-bold text-black">
+                  Type:
+                </span>
+                <select
+                  className="font-mono text-[11px] uppercase tracking-[1px] text-black outline-none cursor-pointer"
+                  style={{
+                    border: `3px solid ${RB.black}`,
+                    padding: '4px 6px',
+                    backgroundColor: RB.white,
+                    borderRadius: 0
+                  }}
+                  value={modeFilter}
+                  onChange={(e) => setModeFilter(e.target.value)}
+                >
+                  <option value="all">All</option>
+                  <option value="custom">Custom</option>
+                  <option value="static">Static</option>
+                  <option value="declarative">Declarative</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ---------------------------------------------------------------- */}
         {/* Entry list                                                      */}

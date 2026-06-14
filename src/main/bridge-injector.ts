@@ -43,6 +43,7 @@ export function injectBridge(webContents: Electron.WebContents): void {
 
   const js = `
 (function(){
+  //# sourceURL=__bridge-injector__
   var tree = ${treeJson};
 
   function deepEqual(a, b) {

@@ -30,6 +30,23 @@ function makeTraceId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
+/**
+ * Strip injector-internal frames from a stack trace.
+ * Also removes anonymous (<anonymous>:…) frames which carry no useful
+ * file-path information (e.g. calls from DevTools console).
+ * Returns undefined when no meaningful frames remain.
+ */
+function cleanStack(stack: string | undefined): string | undefined {
+  if (!stack) return undefined
+  const lines = stack.split('\n')
+  const kept = lines.filter(
+    (line) => !line.includes('__bridge-injector__') && !line.includes('<anonymous>')
+  )
+  // Nothing useful left — don't store a stack at all
+  if (kept.length <= 1) return undefined
+  return kept.join('\n')
+}
+
 // If this is an app-runner child process, exit immediately —
 // the app-runner entry point handles that case separately.
 if (process.argv.includes('--app-runner')) {
@@ -85,6 +102,8 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
+    minWidth: 900,
+    minHeight: 600,
     show: false,
     autoHideMenuBar: true,
     ...titleBarOptions(),
@@ -172,8 +191,10 @@ app.whenReady().then(() => {
   // Open a route in a new window
   ipcMain.on('open-route', (_event, route: string) => {
     const childWindow = new BrowserWindow({
-      width: 700,
-      height: 500,
+      width: 950,
+      height: 600,
+      minWidth: 950,
+      minHeight: 400,
       autoHideMenuBar: true,
       ...titleBarOptions(),
       webPreferences: {
@@ -257,6 +278,7 @@ app.whenReady().then(() => {
         }
         bridgeCallStore.push({
           ...entry,
+          stack: cleanStack(entry.stack),
           sync: true,
           timestamp: Date.now()
         })
@@ -454,7 +476,7 @@ app.whenReady().then(() => {
         durationMs,
         mode: mode as 'custom' | 'static' | 'declarative',
         sync: false,
-        stack: meta?.stack,
+        stack: cleanStack(meta?.stack),
         consoleOutput: sandboxConsoleOutput,
         sourceUrl,
         traceId: makeTraceId(),
