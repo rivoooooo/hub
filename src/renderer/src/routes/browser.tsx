@@ -1098,6 +1098,12 @@ function BrowserControl(): React.JSX.Element {
                   >
                     Save Bridge
                   </button>
+                  <button
+                    className={`w-full ${btnPrimary} text-[12px] py-[8px]`}
+                    onClick={() => window.api.openRoute('/bridge-console')}
+                  >
+                    Console
+                  </button>
                   <div className="flex gap-[8px]">
                     <button
                       className={`flex-1 ${btnPrimary} text-[12px] py-[8px]`}

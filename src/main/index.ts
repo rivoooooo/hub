@@ -13,6 +13,7 @@ import * as logStore from './log-store'
 import { getLogger } from './logger'
 import { getConfigDir } from './config-dir'
 import { runInSandbox } from './sandbox'
+import * as sandboxConsoleStore from './sandbox-console-store'
 
 // If this is an app-runner child process, exit immediately —
 // the app-runner entry point handles that case separately.
@@ -366,7 +367,7 @@ app.whenReady().then(() => {
 
       case 'custom': {
         try {
-          const result = runInSandbox(fnConfig.codeString ?? '', args)
+          const result = runInSandbox(fnConfig.codeString ?? '', args, path.join('.'))
           return result
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
@@ -377,6 +378,12 @@ app.whenReady().then(() => {
       default:
         return { error: `unknown mode: ${mode}` }
     }
+  })
+
+  // Sandbox console — read / clear output from custom bridge functions
+  ipcMain.handle('sandbox-console:get', () => sandboxConsoleStore.getAll())
+  ipcMain.handle('sandbox-console:clear', () => {
+    sandboxConsoleStore.clear()
   })
 
   // SEO analysis

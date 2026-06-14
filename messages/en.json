@@ -145,5 +145,7 @@
   "logs_system_logs_desc": "View application system logs",
   "logs_open_file": "View",
   "logs_open_dir": "Open Directory",
-  "logs_total_lines": "Total: {lines} lines"
+  "logs_total_lines": "Total: {lines} lines",
+  "bridge_console_card_title": "BRIDGE CONSOLE",
+  "bridge_console_card_desc": "View log output from custom bridge functions"
 }

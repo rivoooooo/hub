@@ -15,6 +15,7 @@
  */
 
 import vm from 'node:vm'
+import { push as pushConsoleEntry } from './sandbox-console-store'
 
 // ---------------------------------------------------------------------------
 // Restricted global allowlist
@@ -24,7 +25,47 @@ import vm from 'node:vm'
 // is a proven need from custom bridge functions.
 // ---------------------------------------------------------------------------
 
-const SAFE_GLOBALS: Record<string, unknown> = {
+function fmtConsoleArgs(...args: unknown[]): string {
+  return args
+    .map((a) => {
+      if (typeof a === 'string') return a
+      if (a === null) return 'null'
+      if (a === undefined) return 'undefined'
+      try {
+        return JSON.stringify(a)
+      } catch {
+        return String(a)
+      }
+    })
+    .join(' ')
+}
+
+/**
+ * Build a console stub object that forwards entries to the shared store.
+ * The `label` is baked in so each sandbox invocation gets its own closure.
+ */
+interface SandboxConsole {
+  log: (...args: unknown[]) => void
+  warn: (...args: unknown[]) => void
+  error: (...args: unknown[]) => void
+}
+
+function createSandboxConsole(label: string): SandboxConsole {
+  return {
+    log: (...args: unknown[]) => {
+      pushConsoleEntry('log', fmtConsoleArgs(...args), label)
+    },
+    warn: (...args: unknown[]) => {
+      pushConsoleEntry('warn', fmtConsoleArgs(...args), label)
+    },
+    error: (...args: unknown[]) => {
+      pushConsoleEntry('error', fmtConsoleArgs(...args), label)
+    }
+  }
+}
+
+/** Shared globals that do NOT depend on the current invocation label. */
+const SHARED_GLOBALS: Record<string, unknown> = {
   // --- Primitives & constructors ---
   // NOTE: `Function` is deliberately omitted.  The `Function` constructor
   // is a classic vm sandbox escape vector (via prototype chain traversal).
@@ -79,33 +120,20 @@ const SAFE_GLOBALS: Record<string, unknown> = {
   Uint16Array,
   Uint32Array,
   BigInt64Array,
-  BigUint64Array,
-
-  // --- Control flow ---
-  // (Promise already listed above)
-  console: {
-    // Limited console — only safe methods, no `console.profile` etc.
-    log: (..._args: unknown[]) => {
-      // In the future these could be forwarded to log-store
-    },
-    warn: (..._args: unknown[]) => {
-      // Forward to log-store in future
-    },
-    error: (..._args: unknown[]) => {
-      // Forward to log-store in future
-    }
-  }
+  BigUint64Array
 }
 
 // ---------------------------------------------------------------------------
 // Context factory — create a fresh context per invocation
 // ---------------------------------------------------------------------------
 
-function createSandboxContext(args: unknown[]): Record<string, unknown> {
-  const ctx = { ...SAFE_GLOBALS }
-  // The function body receives `args` as its sole parameter
-  ctx.args = args
-  return ctx
+function createSandboxContext(args: unknown[], label: string): Record<string, unknown> {
+  return {
+    ...SHARED_GLOBALS,
+    console: createSandboxConsole(label),
+    // The function body receives `args` as its sole parameter
+    args
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -125,16 +153,18 @@ const EXECUTION_TIMEOUT_MS = 5_000
  *
  * @param code   - Anonymous function body string, e.g. `(args) => { const [k,v] = args; return k; }`
  * @param args   - Array of arguments passed from the caller (via bridge Proxy)
+ * @param label  - Optional identifier shown in console output (typically the bridge path)
  * @returns      - Return value of the function
  * @throws       - On compilation / execution / timeout errors
  */
-export function runInSandbox(code: string, args: unknown[]): unknown {
+export function runInSandbox(code: string, args: unknown[], label?: string): unknown {
   if (!code || code.trim().length === 0) {
     throw new Error('custom function has no code')
   }
 
   const wrappedCode = `(function(){ return (${code})(args) })()`
-  const context = createSandboxContext(args)
+  const context = createSandboxContext(args, label ?? 'bridge')
+
   vm.createContext(context, {
     // Prevent the sandbox from leaking back to the host context
     microtaskMode: 'afterEvaluate'

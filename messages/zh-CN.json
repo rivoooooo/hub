@@ -145,5 +145,7 @@
   "logs_system_logs_desc": "查看应用程序系统日志",
   "logs_open_file": "查看",
   "logs_open_dir": "打开目录",
-  "logs_total_lines": "总计: {lines} 行"
+  "logs_total_lines": "总计: {lines} 行",
+  "bridge_console_card_title": "桥接控制台",
+  "bridge_console_card_desc": "查看自定义桥接函数的日志输出"
 }

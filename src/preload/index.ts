@@ -120,6 +120,24 @@ const browserControls = {
 }
 
 // ---------------------------------------------------------------------------
+// Sandbox Console API — view output from custom bridge functions
+// ---------------------------------------------------------------------------
+
+// Sandbox console entry type
+interface SandboxConsoleEntry {
+  id: number
+  timestamp: number
+  level: 'log' | 'warn' | 'error'
+  message: string
+  path: string
+}
+
+const sandboxConsoleApi = {
+  getEntries: (): Promise<SandboxConsoleEntry[]> => ipcRenderer.invoke('sandbox-console:get'),
+  clear: (): Promise<void> => ipcRenderer.invoke('sandbox-console:clear')
+}
+
+// ---------------------------------------------------------------------------
 // Logs API
 // ---------------------------------------------------------------------------
 
@@ -312,6 +330,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('seoApi', seoApi)
     contextBridge.exposeInMainWorld('dockApi', dockApi)
     contextBridge.exposeInMainWorld('logsApi', logsApi)
+    contextBridge.exposeInMainWorld('sandboxConsoleApi', sandboxConsoleApi)
 
     // Bridge IPC channel — used by injected Proxy bridge on target pages
     contextBridge.exposeInMainWorld('__bridgeCall', {
@@ -342,6 +361,8 @@ if (process.contextIsolated) {
   window.dockApi = dockApi
   // @ts-expect-error (define in dts)
   window.logsApi = logsApi
+  // @ts-expect-error (define in dts)
+  window.sandboxConsoleApi = sandboxConsoleApi
   // @ts-expect-error (define in dts)
   window.__bridgeCall = {
     call: (path: string[], ...args: unknown[]): Promise<unknown> =>

@@ -227,6 +227,19 @@ interface LoggerApi {
   error: (message: string, ...args: unknown[]) => void
 }
 
+interface SandboxConsoleEntry {
+  id: number
+  timestamp: number
+  level: 'log' | 'warn' | 'error'
+  message: string
+  path: string
+}
+
+interface SandboxConsoleApi {
+  getEntries: () => Promise<SandboxConsoleEntry[]>
+  clear: () => Promise<void>
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -245,5 +258,7 @@ declare global {
     __bridgeCall: BridgeCallChannel
     /** Logger API — sends structured logs to the main process */
     loggerApi: LoggerApi
+    /** Sandbox console — output from custom bridge functions */
+    sandboxConsoleApi: SandboxConsoleApi
   }
 }
