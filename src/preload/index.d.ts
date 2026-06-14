@@ -108,8 +108,10 @@ interface SeoResult {
   metaRobots: string | null
   canonical: string | null
   htmlLang: string | null
+  favicon: string | null
   og: Record<string, string>
   twitter: Record<string, string>
+  headings: { level: number; text: string }[]
   issues: string[]
 }
 

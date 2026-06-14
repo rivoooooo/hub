@@ -63,5 +63,7 @@
   "seo_meta": "元数据",
   "seo_og": "Open Graph",
   "seo_twitter": "Twitter Card",
+  "seo_headings": "标题结构",
+  "seo_no_headings": "未找到标题",
   "seo_no_issues": "未发现问题"
 }

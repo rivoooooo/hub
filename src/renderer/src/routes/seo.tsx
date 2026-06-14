@@ -16,8 +16,10 @@ interface SeoResult {
   metaRobots: string | null
   canonical: string | null
   htmlLang: string | null
+  favicon: string | null
   og: Record<string, string>
   twitter: Record<string, string>
+  headings: { level: number; text: string }[]
   issues: string[]
 }
 
@@ -182,6 +184,33 @@ function SeoResults({ result }: { result: SeoResult }): React.JSX.Element {
         <MetaRow label="Robots" value={result.metaRobots} />
         <MetaRow label="Canonical" value={result.canonical} />
         <MetaRow label="HTML Lang" value={result.htmlLang} />
+        <MetaRow label="Favicon" value={result.favicon} />
+      </section>
+
+      {/* Headings */}
+      <section>
+        <h2 className={sectionTitle}>
+          {m.seo_headings()} ({result.headings.length})
+        </h2>
+        {result.headings.length === 0 ? (
+          <p className="font-mono text-[14px] text-black/50 italic">{m.seo_no_headings()}</p>
+        ) : (
+          <div className="space-y-[4px]">
+            {result.headings.map((h, i) => (
+              <div
+                key={i}
+                className="font-mono text-[14px] leading-[1.5] text-black"
+                style={{ paddingLeft: `${(h.level - 1) * 20}px` }}
+              >
+                <span className="text-black/40 font-bold mr-[8px]">H{h.level}</span>
+                {h.text}
+              </div>
+            ))}
+          </div>
+        )}
+        {result.headings.filter((h) => h.level === 1).length > 1 && (
+          <p className="font-mono text-[12px] text-error mt-[8px]">⚠ Multiple H1 tags detected</p>
+        )}
       </section>
 
       {/* Open Graph */}

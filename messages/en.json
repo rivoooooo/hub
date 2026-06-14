@@ -63,5 +63,7 @@
   "seo_meta": "Meta",
   "seo_og": "Open Graph",
   "seo_twitter": "Twitter Card",
+  "seo_headings": "Headings",
+  "seo_no_headings": "No headings found",
   "seo_no_issues": "No issues found"
 }

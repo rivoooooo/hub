@@ -17,9 +17,12 @@ export interface SeoResult {
   metaRobots: string | null
   canonical: string | null
   htmlLang: string | null
+  favicon: string | null
 
   og: Record<string, string>
   twitter: Record<string, string>
+
+  headings: { level: number; text: string }[]
 
   issues: string[]
 }
@@ -47,8 +50,9 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
     targetUrl = 'https://' + targetUrl
   }
 
+  let parsed: URL
   try {
-    new URL(targetUrl)
+    parsed = new URL(targetUrl)
   } catch {
     return {
       url,
@@ -60,8 +64,10 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
       metaRobots: null,
       canonical: null,
       htmlLang: null,
+      favicon: null,
       og: {},
       twitter: {},
+      headings: [],
       issues: ['Invalid URL — could not parse']
     }
   }
@@ -105,8 +111,10 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
       metaRobots: null,
       canonical: null,
       htmlLang: null,
+      favicon: null,
       og: {},
       twitter: {},
+      headings: [],
       issues
     }
   }
@@ -144,6 +152,32 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
     if (name && content) twitter[name] = content
   })
 
+  // --- Favicon ---
+  let favicon: string | null = null
+  const iconLink =
+    $('link[rel="icon"]').first().attr('href') ??
+    $('link[rel="shortcut icon"]').first().attr('href') ??
+    $('link[rel="apple-touch-icon"]').first().attr('href')
+  if (iconLink) {
+    try {
+      favicon = new URL(iconLink, parsed.origin).href
+    } catch {
+      favicon = null
+    }
+  }
+  if (!favicon) {
+    favicon = `${parsed.origin}/favicon.ico`
+  }
+
+  // --- Headings h1-h6 ---
+  const headings: { level: number; text: string }[] = []
+  for (let level = 1; level <= 6; level++) {
+    $(`h${level}`).each((_, el) => {
+      const text = $(el).text().trim()
+      if (text) headings.push({ level, text })
+    })
+  }
+
   return {
     url,
     fetchTimeMs,
@@ -154,8 +188,10 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
     metaRobots,
     canonical,
     htmlLang,
+    favicon,
     og,
     twitter,
+    headings,
     issues
   }
 }
