@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: dev-browser
+appId: com.rivo.hub
+productName: rivo-hub
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: dev-browser
+  executableName: rivo-hub
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

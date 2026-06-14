@@ -32,7 +32,7 @@ if (!APP_ID) {
 }
 
 // Read the parent app name so the OS-level name (e.g. Dock, taskbar) reflects
-// the dock app's name rather than 'Electron' or 'dev-home'.
+// the dock app's name rather than 'Electron' or 'rivo-hub'.
 const appNameIndex = process.argv.indexOf('--app-name')
 const APP_NAME = appNameIndex !== -1 ? process.argv[appNameIndex + 1] : undefined
 
@@ -403,7 +403,7 @@ app
     // OS-specific optimisations for taskbar / dock separation
     if (process.platform === 'win32') {
       // Set a unique AppUserModelId so the taskbar entry is fully independent
-      app.setAppUserModelId(`com.electron.dev-browser.app-runner.${APP_ID}`)
+      app.setAppUserModelId(`com.rivo.hub.app-runner.${APP_ID}`)
     }
     const configDir = CONFIG_DIR ?? USER_DATA_PATH ?? app.getPath('userData')
     getLogger().info('App ready, reading config', { configDir, appId: APP_ID })

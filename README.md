@@ -1,4 +1,4 @@
-# dev-browser
+# rivo-hub
 
 **一种 Electron 桌面浏览器 / 开发者工具集** — 用于管理 PWA 风格的应用窗口、代理、SEO 记录，拥有硬朗的粗野主义（Brutalist）UI。
 

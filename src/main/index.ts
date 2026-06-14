@@ -166,7 +166,7 @@ if (!IS_APP_RUNNER) {
       migrateConfigFile('bridge-config.json')
 
       // Set app user model id for windows
-      electronApp.setAppUserModelId('com.electron')
+      electronApp.setAppUserModelId('com.rivo.hub')
 
       // Default open or close DevTools by F12 in development
       // and ignore CommandOrControl + R in production.
