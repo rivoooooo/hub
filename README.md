@@ -25,16 +25,16 @@
 
 ```bash
 # 1. 克隆后安装依赖
-pnpm install
+vp install
 
 # 2. 启动开发模式（含热更新）
-pnpm dev
+vp dev
 
 # 3. 运行代码检查、格式化、类型检查
 vp check
 
 # 4. 生产构建
-pnpm build
+vp build
 ```
 
 ## 项目结构
@@ -78,24 +78,24 @@ messages/               # i18n 源文件（en.json, zh-CN.json）
 
 ```bash
 # ── 开发 ──
-pnpm dev            # 启动 Electron 开发模式
+vp dev              # 启动 Electron 开发模式（热更新）
 
-# ── 格式化 / 检查（使用 Vite+） ──
+# ── 格式化 / 检查 ──
 vp fmt              # 格式化代码
 vp lint             # 代码规范检查
 vp check            # 格式化 + 检查 + 类型检查（推荐）
 
 # ── 类型检查 ──
-pnpm typecheck      # 主进程 + 渲染进程
+vp typecheck        # 主进程 + 渲染进程
 
 # ── 构建 ──
-pnpm build           # 类型检查 + 构建
-pnpm build:mac       # macOS 安装包
-pnpm build:win       # Windows 安装包
-pnpm build:linux     # Linux 安装包
+vp build            # 类型检查 + 构建
+pnpm build:mac      # macOS 安装包
+pnpm build:win      # Windows 安装包
+pnpm build:linux    # Linux 安装包
 ```
 
-> 本项目使用 **Vite+**（`vp` CLI）进行格式化、代码检查等操作。Vite+ 还封装了包管理和运行环境管理，运行 `vp help` 查看完整命令列表。
+> 本项目使用 **Vite+**（`vp` CLI）作为统一工具链，涵盖开发、构建、格式化、代码检查、类型检查、包管理和运行环境管理。运行 `vp help` 查看完整命令列表。
 
 ## 设计语言
 
