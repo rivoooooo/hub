@@ -28,13 +28,13 @@
 vp install
 
 # 2. 启动开发模式（含热更新）
-vp dev
+vp run dev
 
 # 3. 运行代码检查、格式化、类型检查
 vp check
 
 # 4. 生产构建
-vp build
+vp run build
 ```
 
 ## 项目结构
@@ -78,7 +78,7 @@ messages/               # i18n 源文件（en.json, zh-CN.json）
 
 ```bash
 # ── 开发 ──
-vp dev              # 启动 Electron 开发模式（热更新）
+vp run dev          # 启动 Electron 开发模式（热更新）
 
 # ── 格式化 / 检查 ──
 vp fmt              # 格式化代码
@@ -89,7 +89,7 @@ vp check            # 格式化 + 检查 + 类型检查（推荐）
 vp typecheck        # 主进程 + 渲染进程
 
 # ── 构建 ──
-vp build            # 类型检查 + 构建
+vp run build        # 类型检查 + 构建
 pnpm build:mac      # macOS 安装包
 pnpm build:win      # Windows 安装包
 pnpm build:linux    # Linux 安装包
