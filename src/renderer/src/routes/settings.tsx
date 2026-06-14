@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { m } from '../paraglide/messages.js'
 import { useLocale } from '../useLocale'
@@ -28,10 +28,13 @@ const localeOptions: { value: string; labelKey: 'settings_locale_en' | 'settings
 export const Route = createFileRoute('/settings')({
   component: function Settings(): React.JSX.Element {
     const { locale, setLocaleAndRerender } = useLocale()
+    const navigate = useNavigate()
     const [proxyEnabled, setProxyEnabled] = useState(false)
     const [proxyUrl, setProxyUrl] = useState('')
     const [seoHistoryDir, setSeoHistoryDir] = useState('')
     const [defaultUserAgent, setDefaultUserAgent] = useState('')
+    const [dataDir, setDataDir] = useState('')
+    const [logsDir, setLogsDir] = useState('')
     const [loaded, setLoaded] = useState(false)
     const proxyUrlRef = useRef<HTMLInputElement>(null)
     const seoHistoryDirRef = useRef<HTMLInputElement>(null)
@@ -45,6 +48,8 @@ export const Route = createFileRoute('/settings')({
         setDefaultUserAgent(s.defaultUserAgent)
         setLoaded(true)
       })
+      window.logsApi.getDataDir().then(setDataDir)
+      window.logsApi.getLogsDir().then(setLogsDir)
     }, [])
 
     const updateSetting = useCallback((key: string, value: unknown) => {
@@ -86,6 +91,18 @@ export const Route = createFileRoute('/settings')({
       },
       [updateSetting]
     )
+
+    const handleOpenDataDir = useCallback(() => {
+      if (dataDir) {
+        window.logsApi.openPath(dataDir).catch(console.error)
+      }
+    }, [dataDir])
+
+    const handleOpenLogsDir = useCallback(() => {
+      if (logsDir) {
+        window.logsApi.openPath(logsDir).catch(console.error)
+      }
+    }, [logsDir])
 
     return (
       <div className="pt-[120px] px-[24px] max-w-[640px]">
@@ -202,6 +219,22 @@ export const Route = createFileRoute('/settings')({
               <p className="font-mono text-[12px] leading-[1.5] text-black/50 pt-[4px]">
                 {m.settings_data_dir_hint()}
               </p>
+
+              {/* System data directory with Open button */}
+              {dataDir && (
+                <div className="flex items-center gap-[12px] pt-[12px]">
+                  <span className="font-mono text-[13px] leading-[1.5] text-black/70 truncate flex-1 min-w-0">
+                    {dataDir}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleOpenDataDir}
+                    className="shrink-0 font-mono text-[13px] leading-[1.5] py-[6px] px-[14px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black"
+                  >
+                    {m.settings_data_dir_open()}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -239,13 +272,29 @@ export const Route = createFileRoute('/settings')({
           <p className="font-mono text-[14px] leading-[1.5] text-black pb-[12px]">
             {m.logs_system_logs_desc()}
           </p>
-          <Link
-            to="/logs"
-            search={{ isDirectory: true }}
-            className="inline-block font-mono text-[13px] leading-[1.5] py-[8px] px-[16px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black no-underline"
-          >
-            {m.logs_open_file()}
-          </Link>
+          {logsDir && (
+            <div className="flex flex-wrap gap-[10px]">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate({
+                    to: '/logs',
+                    search: { filepath: logsDir, isDirectory: true }
+                  })
+                }
+                className="inline-block font-mono text-[13px] leading-[1.5] py-[8px] px-[16px] border-[3px] border-black bg-black text-white cursor-pointer transition-colors duration-[50ms] hover:bg-white hover:text-black"
+              >
+                {m.logs_open_file()}
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenLogsDir}
+                className="font-mono text-[13px] leading-[1.5] py-[8px] px-[16px] border-[3px] border-black bg-white text-black cursor-pointer transition-colors duration-[50ms] hover:bg-[#e8e8e8]"
+              >
+                {m.logs_open_dir()}
+              </button>
+            </div>
+          )}
         </section>
 
         {/* About */}

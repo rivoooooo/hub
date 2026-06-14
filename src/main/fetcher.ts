@@ -3,6 +3,7 @@ import { HttpProxyAgent } from 'http-proxy-agent'
 import * as http from 'http'
 import * as https from 'https'
 import * as settings from './settings-store'
+import { getLogger } from './logger'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,9 +58,9 @@ export async function fetchText(url: string, opts?: FetchTextOptions): Promise<F
   }
 
   if (proxyUrl) {
-    console.log(`[fetcher] Using proxy: ${proxyUrl} → ${url}`)
+    getLogger().debug(`Using proxy: ${proxyUrl} → ${url}`, { proxy: proxyUrl, target: url })
   } else {
-    console.log(`[fetcher] Direct request (no proxy): ${url}`)
+    getLogger().debug(`Direct request (no proxy): ${url}`, { target: url })
   }
 
   return new Promise<FetchTextResult>((resolve, reject) => {

@@ -2,6 +2,19 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // ---------------------------------------------------------------------------
+// Logger utility — sends structured logs to the main process via IPC
+// ---------------------------------------------------------------------------
+
+function logToMain(level: string, message: string, ...args: unknown[]): void {
+  try {
+    ipcRenderer.send('logger:log', level, message, ...args)
+  } catch {
+    // Fallback if IPC isn't available yet
+    console.error(`[renderer] ${level}: ${message}`, ...args)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Shared bridge types — kept in sync with main/bridge-store.ts
 // ---------------------------------------------------------------------------
 
@@ -142,6 +155,7 @@ const logsApi = {
   listDirectory: (dirpath: string): Promise<DirEntry[]> =>
     ipcRenderer.invoke('logs:list-directory', dirpath),
   getDataDir: (): Promise<string> => ipcRenderer.invoke('logs:get-data-dir'),
+  getLogsDir: (): Promise<string> => ipcRenderer.invoke('logs:get-logs-dir'),
   pathExists: (filepath: string): Promise<boolean> =>
     ipcRenderer.invoke('logs:path-exists', filepath),
   isDirectory: (filepath: string): Promise<boolean> =>
@@ -163,6 +177,7 @@ const logsApi = {
   watchStop: (filepath: string): Promise<void> => ipcRenderer.invoke('logs:watch-stop', filepath),
   inferType: (filepath: string): Promise<'txt' | 'json'> =>
     ipcRenderer.invoke('logs:infer-type', filepath),
+  openPath: (filepath: string): Promise<void> => ipcRenderer.invoke('logs:open-path', filepath),
   onFileChanged: (callback: (filepath: string, content: string) => void): (() => void) => {
     const handler = (_event: unknown, fp: string, content: string): void => callback(fp, content)
     ipcRenderer.on('logs:file-changed', handler)
@@ -269,6 +284,19 @@ interface SettingsData {
 }
 
 // ---------------------------------------------------------------------------
+// Logger API — structured logging from the renderer
+// ---------------------------------------------------------------------------
+
+const loggerApi = {
+  log: (level: string, message: string, ...args: unknown[]): void =>
+    logToMain(level, message, ...args),
+  debug: (message: string, ...args: unknown[]): void => logToMain('debug', message, ...args),
+  info: (message: string, ...args: unknown[]): void => logToMain('info', message, ...args),
+  warn: (message: string, ...args: unknown[]): void => logToMain('warn', message, ...args),
+  error: (message: string, ...args: unknown[]): void => logToMain('error', message, ...args)
+}
+
+// ---------------------------------------------------------------------------
 // Context bridge exposure
 // ---------------------------------------------------------------------------
 
@@ -289,8 +317,10 @@ if (process.contextIsolated) {
       call: (path: string[], ...args: unknown[]): Promise<unknown> =>
         ipcRenderer.invoke('bridge:call', path, ...args)
     })
+
+    contextBridge.exposeInMainWorld('loggerApi', loggerApi)
   } catch (error) {
-    console.error(error)
+    logToMain('error', 'contextBridge.exposeInMainWorld failed', error)
   }
 } else {
   // @ts-expect-error (define in dts)
@@ -316,4 +346,6 @@ if (process.contextIsolated) {
     call: (path: string[], ...args: unknown[]): Promise<unknown> =>
       ipcRenderer.invoke('bridge:call', path, ...args)
   }
+  // @ts-expect-error (define in dts)
+  window.loggerApi = loggerApi
 }

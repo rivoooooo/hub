@@ -88,6 +88,7 @@
   "settings_data_dir_title": "DATA DIRECTORY",
   "settings_data_dir_label": "Data Directory",
   "settings_data_dir_hint": "Directory for saving SEO history and other data. Default: ~/.rivo",
+  "settings_data_dir_open": "Open",
   "settings_default_ua_label": "Default User-Agent",
   "settings_default_ua_hint": "Custom User-Agent string for all dock apps. Leave empty to use Electron's default.",
   "nav_dock": "DOCK",
@@ -138,6 +139,7 @@
   "logs_file": "File",
   "logs_system_logs": "System Logs",
   "logs_system_logs_desc": "View application system logs",
-  "logs_open_file": "Open",
+  "logs_open_file": "View",
+  "logs_open_dir": "Open Directory",
   "logs_total_lines": "Total: {lines} lines"
 }

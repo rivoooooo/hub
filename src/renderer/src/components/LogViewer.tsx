@@ -12,6 +12,8 @@ export interface LogViewerProps {
   watch?: boolean
   type?: LogType
   isDirectory?: boolean
+  /** Called when the viewer navigates to a different path (e.g. dir entry click) */
+  onPathChange?: (filepath: string) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -63,7 +65,8 @@ export default function LogViewer({
   filepath,
   watch: initialWatch = false,
   type: initialType = 'auto',
-  isDirectory: directoryMode = false
+  isDirectory: directoryMode = false,
+  onPathChange
 }: LogViewerProps): React.JSX.Element {
   const [content, setContent] = useState<string>('')
   const [totalLines, setTotalLines] = useState(0)
@@ -168,16 +171,13 @@ export default function LogViewer({
     [currentPath]
   )
 
-  // Directory entry click
+  // Directory entry click — delegate to the parent via onPathChange,
+  // which will flow back as the filepath prop and trigger loading via useEffect
   const handleDirEntryClick = useCallback(
     async (entryPath: string) => {
-      setCurrentPath(entryPath)
-      setIsFav(false)
-      await loadPath(entryPath)
-      const fav = await window.logsApi.isFavorite(entryPath)
-      setIsFav(fav)
+      onPathChange?.(entryPath)
     },
-    [loadPath]
+    [onPathChange]
   )
 
   // Favorite toggle

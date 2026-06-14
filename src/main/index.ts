@@ -9,6 +9,7 @@ import { registerSeoHandlers } from './seo'
 import { DockWindowManager } from './dock-window-manager'
 import * as appsStore from './apps-store'
 import * as logStore from './log-store'
+import { getLogger } from './logger'
 
 // If this is an app-runner child process, exit immediately —
 // the app-runner entry point handles that case separately.
@@ -101,6 +102,10 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Initialize the logger — write a startup message to ensure
+  // electron-log creates its directory and log file on disk.
+  getLogger().info('App started')
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -112,7 +117,28 @@ app.whenReady().then(() => {
   })
 
   // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.on('ping', () => getLogger().debug('pong'))
+
+  // Logger — receive log messages from the renderer via IPC
+  ipcMain.on('logger:log', (_event, level: string, message: string, ...args: unknown[]) => {
+    const logger = getLogger().withContext({ source: 'renderer' })
+    switch (level) {
+      case 'debug':
+        logger.debug(message, ...args)
+        break
+      case 'info':
+        logger.info(message, ...args)
+        break
+      case 'warn':
+        logger.warn(message, ...args)
+        break
+      case 'error':
+        logger.error(message, ...args)
+        break
+      default:
+        logger.info(message, ...args)
+    }
+  })
 
   // Open a route in a new window
   ipcMain.on('open-route', (_event, route: string) => {
@@ -399,6 +425,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle('logs:get-data-dir', () => {
     return logStore.getDataDir()
+  })
+
+  ipcMain.handle('logs:get-logs-dir', () => {
+    return logStore.getLogsDir()
+  })
+
+  ipcMain.handle('logs:open-path', async (_event, filepath: string) => {
+    return shell.openPath(filepath)
   })
 
   ipcMain.handle('logs:path-exists', (_event, filepath: string) => {

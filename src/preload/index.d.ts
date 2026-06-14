@@ -201,6 +201,7 @@ interface LogsApi {
   readFile: (filepath: string, offset?: number, limit?: number) => Promise<FileReadResult>
   listDirectory: (dirpath: string) => Promise<DirEntry[]>
   getDataDir: () => Promise<string>
+  getLogsDir: () => Promise<string>
   pathExists: (filepath: string) => Promise<boolean>
   isDirectory: (filepath: string) => Promise<boolean>
   getRecents: () => Promise<LogRecentEntry[]>
@@ -214,7 +215,16 @@ interface LogsApi {
   watchStart: (filepath: string) => Promise<void>
   watchStop: (filepath: string) => Promise<void>
   inferType: (filepath: string) => Promise<'txt' | 'json'>
+  openPath: (filepath: string) => Promise<void>
   onFileChanged: (callback: (filepath: string, content: string) => void) => () => void
+}
+
+interface LoggerApi {
+  log: (level: string, message: string, ...args: unknown[]) => void
+  debug: (message: string, ...args: unknown[]) => void
+  info: (message: string, ...args: unknown[]) => void
+  warn: (message: string, ...args: unknown[]) => void
+  error: (message: string, ...args: unknown[]) => void
 }
 
 declare global {
@@ -232,5 +242,7 @@ declare global {
     logsApi: LogsApi
     /** Bridge IPC channel — used by injected Proxy bridge on target pages */
     __bridgeCall: BridgeCallChannel
+    /** Logger API — sends structured logs to the main process */
+    loggerApi: LoggerApi
   }
 }

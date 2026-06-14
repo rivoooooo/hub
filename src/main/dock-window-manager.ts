@@ -4,6 +4,7 @@ import { app } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import type { DockApp } from './apps-store'
+import { getLogger } from './logger'
 
 /**
  * Manages lifecycle of independent dock app windows.
@@ -105,12 +106,15 @@ export class DockWindowManager {
       }
       this.notifyStateChange()
       if (code !== 0 && is.dev) {
-        console.log(`[dock] app ${dockApp.id} exited with code ${code}`)
+        getLogger().warn(`App ${dockApp.id} exited with code ${code}`, { code, appId: dockApp.id })
       }
     })
 
     child.on('error', (err) => {
-      console.error(`[dock] failed to launch app ${dockApp.id}:`, err.message)
+      getLogger().error(`Failed to launch app ${dockApp.id}`, {
+        appId: dockApp.id,
+        error: err.message
+      })
       this.readyApps.delete(dockApp.id)
       this.processes.delete(dockApp.id)
       this.notifyStateChange()

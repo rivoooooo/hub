@@ -4,6 +4,7 @@ import { fetchText } from './fetcher'
 import * as settings from './settings-store'
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { getLogger } from './logger'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,7 +44,10 @@ export function registerSeoHandlers(): void {
     try {
       saveHistoryEntry(result)
     } catch (err) {
-      console.error('SEO history save failed:', err)
+      getLogger().error(
+        'SEO history save failed',
+        err instanceof Error ? err : new Error(String(err))
+      )
     }
     return result
   })

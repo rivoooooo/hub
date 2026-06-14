@@ -24,6 +24,9 @@ importers:
       '@electron-toolkit/utils':
         specifier: ^4.0.0
         version: 4.0.0(electron@39.8.10)
+      '@loglayer/transport-electron-log':
+        specifier: ^3.2.0
+        version: 3.2.0(electron-log@5.4.4)
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(@voidzero-dev/vite-plus-core@0.1.24(@types/node@22.19.21)(jiti@2.7.0)(typescript@5.9.3))
@@ -36,6 +39,9 @@ importers:
       cheerio:
         specifier: ^1.2.0
         version: 1.2.0
+      electron-log:
+        specifier: ^5.4.4
+        version: 5.4.4
       electron-updater:
         specifier: ^6.3.9
         version: 6.8.9
@@ -45,6 +51,9 @@ importers:
       https-proxy-agent:
         specifier: ^9.1.0
         version: 9.1.0
+      loglayer:
+        specifier: ^9.3.0
+        version: 9.3.0
       lucide-react:
         specifier: ^1.18.0
         version: 1.18.0(react@19.2.7)
@@ -571,6 +580,32 @@ packages:
 
   '@lix-js/server-protocol-schema@0.1.1':
     resolution: {integrity: sha512-jBeALB6prAbtr5q4vTuxnRZZv1M2rKe8iNqRQhFJ4Tv7150unEa0vKyz0hs8Gl3fUGsWaNJBh3J8++fpbrpRBQ==}
+
+  '@loglayer/context-manager@2.2.0':
+    resolution: {integrity: sha512-rnAXJIMRCUFuMtWNDK1F9vyh29SQQA659LVHHVv6AxvyQ/5DJpIkM7VhfuPVFV2EfnZXv343zbxDr29La5SOyA==}
+    engines: {node: '>=18'}
+
+  '@loglayer/log-level-manager@2.2.0':
+    resolution: {integrity: sha512-ifJ6i2Tc0vwNhPS8Ugr/Y5iabNmcX+QnXnPzjz2aKxgNQQGYZ6qWlAI7WI75tINRr9S+4xxbvim9hNjQ42z7Lw==}
+    engines: {node: '>=18'}
+
+  '@loglayer/plugin@3.2.0':
+    resolution: {integrity: sha512-yBqmZeY0+5uFzbUkSrH82tzDfo1YhzCyBx+ZEvikkYAkOlAlQHEFda4Ue+il4Km2FrCCCG0qPgMEd3Mz8kIITg==}
+    engines: {node: '>=18'}
+
+  '@loglayer/shared@4.3.0':
+    resolution: {integrity: sha512-jlNeh0+uOGlKMhKk1Sx9Qdk7ni+I3hHZz2LB7Lp8BmUnqHD0TGRhsp2rV/zMiszSYUwI8XGvNrZttpxBL05U5A==}
+    engines: {node: '>=18'}
+
+  '@loglayer/transport-electron-log@3.2.0':
+    resolution: {integrity: sha512-8Si4D+Yhn9XzkFH7O25OccrGvMggFN0KDF8OKK2i4ReJI9sdqjMUHl9zCtyUxNdk1fNFe9i22ZwPB9RfqyKFJA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      electron-log: '*'
+
+  '@loglayer/transport@3.2.0':
+    resolution: {integrity: sha512-UMnlJggWIAYzZv8PN9dR3v7qMDG7vKVyPJjyfypBa8Y2yLk/4XzDp2fAvSd1OJKWQh03lO7GfGpo87SSYoIANg==}
+    engines: {node: '>=18'}
 
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
@@ -1868,6 +1903,10 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
+  electron-log@5.4.4:
+    resolution: {integrity: sha512-istWgaXjBfURBSS8LWVW9C3jsc6+ac+tY1lXrQEOTp0lVj+a4OlO1Tmqb36GgnEUDv92DGC9VI1HNXwJinWpgA==}
+    engines: {node: '>= 14'}
+
   electron-publish@26.15.3:
     resolution: {integrity: sha512-g/2bn8YTavY4cuS5F+jOS7zmZbXXBV8KZ8yHKfJjFPoKtzBqrpCdNPxBd3tqdBwP7BVd0lGzf7Bk2s0KesWZ4Q==}
 
@@ -2434,6 +2473,10 @@ packages:
 
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
+
+  loglayer@9.3.0:
+    resolution: {integrity: sha512-xiZFMbUCcy8mC+/uV0EzkZV6nbo3qweQjKKQSGkcrug2VpOHudzcoWR0DOl9edr8oS+BwyEjimpG3sF2CW8sww==}
+    engines: {node: '>=18'}
 
   lowercase-keys@2.0.0:
     resolution: {integrity: sha512-tqNXrS78oMOE73NMxK4EMLQsQowWf8jKooH9g7xPavRT706R6bkQJ6DY2Te7QukaZsulxa30wQ7bk0pm4XiHmA==}
@@ -3587,6 +3630,29 @@ snapshots:
       - babel-plugin-macros
 
   '@lix-js/server-protocol-schema@0.1.1': {}
+
+  '@loglayer/context-manager@2.2.0':
+    dependencies:
+      '@loglayer/shared': 4.3.0
+
+  '@loglayer/log-level-manager@2.2.0':
+    dependencies:
+      '@loglayer/shared': 4.3.0
+
+  '@loglayer/plugin@3.2.0':
+    dependencies:
+      '@loglayer/shared': 4.3.0
+
+  '@loglayer/shared@4.3.0': {}
+
+  '@loglayer/transport-electron-log@3.2.0(electron-log@5.4.4)':
+    dependencies:
+      '@loglayer/transport': 3.2.0
+      electron-log: 5.4.4
+
+  '@loglayer/transport@3.2.0':
+    dependencies:
+      '@loglayer/shared': 4.3.0
 
   '@malept/cross-spawn-promise@2.0.0':
     dependencies:
@@ -4764,6 +4830,8 @@ snapshots:
       - electron-builder-squirrel-windows
       - supports-color
 
+  electron-log@5.4.4: {}
+
   electron-publish@26.15.3:
     dependencies:
       '@types/fs-extra': 9.0.13
@@ -5386,6 +5454,14 @@ snapshots:
   lodash.isequal@4.5.0: {}
 
   lodash@4.18.1: {}
+
+  loglayer@9.3.0:
+    dependencies:
+      '@loglayer/context-manager': 2.2.0
+      '@loglayer/log-level-manager': 2.2.0
+      '@loglayer/plugin': 3.2.0
+      '@loglayer/shared': 4.3.0
+      '@loglayer/transport': 3.2.0
 
   lowercase-keys@2.0.0: {}
 

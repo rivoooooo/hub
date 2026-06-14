@@ -17,6 +17,7 @@ import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { get as httpsGet } from 'https'
 import { get as httpGet } from 'http'
+import { getLogger } from './logger'
 
 // ---------------------------------------------------------------------------
 // Parse CLI args
@@ -26,7 +27,7 @@ const appIdIndex = process.argv.indexOf('--app-id')
 const APP_ID = appIdIndex !== -1 ? process.argv[appIdIndex + 1] : null
 
 if (!APP_ID) {
-  console.error('app-runner: missing --app-id argument')
+  getLogger().error('Missing --app-id argument')
   process.exit(1)
 }
 
@@ -70,7 +71,7 @@ interface DockApp {
 function readAppConfig(id: string, userDataPath: string): DockApp | null {
   const appsFile = join(userDataPath, 'apps.json')
   if (!existsSync(appsFile)) {
-    console.error(`app-runner: apps.json not found at ${appsFile}`)
+    getLogger().error(`Apps.json not found at ${appsFile}`)
     return null
   }
   try {
@@ -78,7 +79,7 @@ function readAppConfig(id: string, userDataPath: string): DockApp | null {
     const apps: DockApp[] = JSON.parse(raw)
     return apps.find((a) => a.id === id) ?? null
   } catch (err) {
-    console.error('app-runner: failed to read apps.json', err)
+    getLogger().error('Failed to read apps.json', err)
     return null
   }
 }
@@ -383,7 +384,7 @@ app.whenReady().then(async () => {
   }
   const appCfg = readAppConfig(APP_ID!, USER_DATA_PATH ?? app.getPath('userData'))
   if (!appCfg) {
-    console.error(`app-runner: app ${APP_ID} not found in apps.json`)
+    getLogger().error(`App ${APP_ID} not found in apps.json`)
     app.quit()
     return
   }

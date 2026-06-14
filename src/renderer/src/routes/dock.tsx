@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type React from 'react'
 import DockAppFormModal, { type DockFormValues } from '@renderer/components/DockAppFormModal'
 import { m } from '../paraglide/messages.js'
+import { getLogger } from '../logger'
 
 // ---------------------------------------------------------------------------
 // AppIcon — icon display for dock app cards
@@ -95,10 +96,13 @@ export const Route = createFileRoute('/dock')({
 
     const handleStop = useCallback(() => {
       if (!contextMenu) return
-      void window.dockApi.closeApp(contextMenu.app.id).then(() => {
-        setContextMenu(null)
-        loadRunning()
-      }, console.error)
+      void window.dockApi.closeApp(contextMenu.app.id).then(
+        () => {
+          setContextMenu(null)
+          loadRunning()
+        },
+        (err) => getLogger().error('Failed to close app', err)
+      )
     }, [contextMenu, loadRunning])
 
     const handleContextMenu = useCallback((e: React.MouseEvent, app: DockApp) => {
@@ -115,11 +119,14 @@ export const Route = createFileRoute('/dock')({
         .then(() => {
           return window.dockApi.remove(contextMenu.app.id)
         })
-        .then(() => {
-          setContextMenu(null)
-          loadApps()
-          loadRunning()
-        }, console.error)
+        .then(
+          () => {
+            setContextMenu(null)
+            loadApps()
+            loadRunning()
+          },
+          (err) => getLogger().error('Failed to uninstall app', err)
+        )
     }, [contextMenu, loadApps, loadRunning])
 
     const handleEdit = useCallback(() => {

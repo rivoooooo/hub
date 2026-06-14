@@ -257,6 +257,15 @@ export function getDataDir(): string {
   return app.getPath('userData')
 }
 
+/** Return the directory where electron-log stores its log files */
+export function getLogsDir(): string {
+  const dir = app.getPath('logs')
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
+  }
+  return dir
+}
+
 /** Infer log type from filepath extension */
 export function inferType(filepath: string): 'txt' | 'json' {
   const ext = filepath.toLowerCase()

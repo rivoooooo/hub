@@ -7,6 +7,15 @@
  */
 import { contextBridge, ipcRenderer } from 'electron'
 
+// Simple log forwarding to main process for the browser preload
+function logToMain(level: string, message: string, ...args: unknown[]): void {
+  try {
+    ipcRenderer.send('logger:log', level, message, ...args)
+  } catch {
+    console.error(`[browser-preload] ${level}: ${message}`, ...args)
+  }
+}
+
 const bridgeCallChannel = {
   call: (path: string[], ...args: unknown[]): Promise<unknown> =>
     ipcRenderer.invoke('bridge:call', path, ...args)
@@ -16,7 +25,7 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('__bridgeCall', bridgeCallChannel)
   } catch (error) {
-    console.error(error)
+    logToMain('error', 'contextBridge.exposeInMainWorld failed', error)
   }
 } else {
   // @ts-expect-error (global assignment)

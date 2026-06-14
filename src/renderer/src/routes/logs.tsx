@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from '@tanstack/react-router'
+import { createFileRoute, Link, useSearch, useNavigate } from '@tanstack/react-router'
 import { useState, useCallback } from 'react'
 import LogViewer from '../components/LogViewer'
 import LogSidebar from '../components/LogSidebar'
@@ -31,19 +31,22 @@ export const Route = createFileRoute('/logs')({
   }),
   component: function LogsPage(): React.JSX.Element {
     const search = useSearch({ from: Route.id })
+    const navigate = useNavigate()
     const [currentPath, setCurrentPath] = useState<string>(search.filepath || '')
     const [inputPath, setInputPath] = useState(search.filepath || '')
 
-    const handleSelectPath = useCallback((filepath: string, isDirectory: boolean) => {
-      setCurrentPath(filepath)
-      setInputPath(filepath)
-      // Update URL search params without navigation
-      window.history.replaceState(
-        null,
-        '',
-        `/logs?filepath=${encodeURIComponent(filepath)}${isDirectory ? '&isDirectory=true' : ''}`
-      )
-    }, [])
+    const handleSelectPath = useCallback(
+      (filepath: string, isDirectory: boolean) => {
+        setCurrentPath(filepath)
+        setInputPath(filepath)
+        navigate({
+          to: '/logs',
+          search: { filepath, isDirectory: isDirectory || undefined },
+          replace: true
+        })
+      },
+      [navigate]
+    )
 
     const handleBrowse = useCallback(async () => {
       const val = inputPath.trim()
@@ -51,15 +54,19 @@ export const Route = createFileRoute('/logs')({
       setCurrentPath(val)
       try {
         const isDir = await window.logsApi.isDirectory(val)
-        window.history.replaceState(
-          null,
-          '',
-          `/logs?filepath=${encodeURIComponent(val)}${isDir ? '&isDirectory=true' : ''}`
-        )
+        navigate({
+          to: '/logs',
+          search: { filepath: val, isDirectory: isDir || undefined },
+          replace: true
+        })
       } catch {
-        window.history.replaceState(null, '', `/logs?filepath=${encodeURIComponent(val)}`)
+        navigate({
+          to: '/logs',
+          search: { filepath: val },
+          replace: true
+        })
       }
-    }, [inputPath])
+    }, [inputPath, navigate])
 
     return (
       <div className="pt-[80px] px-[24px] pb-[24px] h-screen flex flex-col">
@@ -113,6 +120,15 @@ export const Route = createFileRoute('/logs')({
                 watch={search.watch}
                 type={search.type}
                 isDirectory={search.isDirectory}
+                onPathChange={(fp) => {
+                  setCurrentPath(fp)
+                  setInputPath(fp)
+                  navigate({
+                    to: '/logs',
+                    search: { filepath: fp },
+                    replace: true
+                  })
+                }}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center border-[3px] border-black">

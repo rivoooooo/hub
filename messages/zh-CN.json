@@ -88,6 +88,7 @@
   "settings_data_dir_title": "数据目录",
   "settings_data_dir_label": "数据目录",
   "settings_data_dir_hint": "用于保存 SEO 历史等数据的目录，默认 ~/.rivo",
+  "settings_data_dir_open": "打开目录",
   "settings_default_ua_label": "默认 User-Agent",
   "settings_default_ua_hint": "所有 dock 应用的自定义 User-Agent 字符串。留空则使用 Electron 默认值。",
   "nav_dock": "DOCK",
@@ -138,6 +139,7 @@
   "logs_file": "文件",
   "logs_system_logs": "系统日志",
   "logs_system_logs_desc": "查看应用程序系统日志",
-  "logs_open_file": "打开",
+  "logs_open_file": "查看",
+  "logs_open_dir": "打开目录",
   "logs_total_lines": "总计: {lines} 行"
 }
