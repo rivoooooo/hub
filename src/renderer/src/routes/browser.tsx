@@ -732,8 +732,8 @@ function BrowserControl(): React.JSX.Element {
   }
 
   return (
-    <>
-      <div className="pt-[120px] px-[24px]">
+    <div className="flex min-h-screen">
+      <div className="flex-1 pt-[120px] px-[24px] pb-[40px]">
         <div className="flex items-center justify-between pb-[16px]">
           <h1 className="font-headline text-[64px] leading-none text-black">{m.browser_title()}</h1>
           <button
@@ -900,14 +900,9 @@ function BrowserControl(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Right sidebar overlay */}
+      {/* Right sidebar — natural flex flow */}
       {bridgeSidebar && (
-        <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setBridgeSidebar(false)} />
-      )}
-
-      {/* Right sidebar */}
-      {bridgeSidebar && (
-        <div className="fixed top-0 right-0 z-50 h-full w-[480px] max-w-[92vw] bg-white border-l-[3px] border-black overflow-y-auto">
+        <div className="w-[480px] max-w-[92vw] h-screen bg-white border-l-[3px] border-black overflow-y-auto sticky top-0">
           <div className="px-[24px] pt-16">
             {/* Header */}
             <div className="flex items-center justify-between pb-[16px]">
@@ -1048,6 +1043,6 @@ function BrowserControl(): React.JSX.Element {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }
