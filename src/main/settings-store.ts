@@ -9,11 +9,15 @@ export type BrowserTitleBarMode = 'default' | 'hidden' | 'transparent'
 export interface SettingsData {
   browserTitleBarMode: BrowserTitleBarMode
   toolbarVisible: boolean
+  proxyEnabled: boolean
+  proxyUrl: string
 }
 
 const DEFAULTS: SettingsData = {
   browserTitleBarMode: 'hidden',
-  toolbarVisible: false
+  toolbarVisible: false,
+  proxyEnabled: false,
+  proxyUrl: ''
 }
 
 let cache: SettingsData | null = null

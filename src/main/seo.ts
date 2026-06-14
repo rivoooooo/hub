@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import * as cheerio from 'cheerio'
+import { fetchText } from './fetcher'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,23 +92,23 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
   let contentLength = 0
 
   try {
-    const response = await fetch(targetUrl, {
-      signal: AbortSignal.timeout(15_000),
+    const result = await fetchText(targetUrl, {
+      timeout: 15_000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; DevBrowser-SEO/1.0)',
         Accept: 'text/html,application/xhtml+xml'
       }
     })
 
-    if (!response.ok) {
-      issues.push(`HTTP ${response.status} ${response.statusText}`)
+    if (result.status < 200 || result.status >= 300) {
+      issues.push(`HTTP ${result.status} ${result.statusText}`)
     }
 
-    html = await response.text()
+    html = result.text
     contentLength = new TextEncoder().encode(html).length
 
     // Check content type
-    const contentType = response.headers.get('content-type') ?? ''
+    const contentType = result.contentType
     if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
       issues.push(`Unexpected content-type: "${contentType}" — page may not be HTML`)
     }

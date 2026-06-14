@@ -21,6 +21,8 @@ interface BrowserApi {
 interface SettingsData {
   browserTitleBarMode: 'default' | 'hidden' | 'transparent'
   toolbarVisible: boolean
+  proxyEnabled: boolean
+  proxyUrl: string
 }
 
 interface SettingsApi {

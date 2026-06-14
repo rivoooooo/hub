@@ -144,6 +144,8 @@ type BrowserTitleBarMode = 'default' | 'hidden' | 'transparent'
 interface SettingsData {
   browserTitleBarMode: BrowserTitleBarMode
   toolbarVisible: boolean
+  proxyEnabled: boolean
+  proxyUrl: string
 }
 
 // ---------------------------------------------------------------------------
