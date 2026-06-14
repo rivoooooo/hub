@@ -109,6 +109,7 @@ interface SeoResult {
   canonical: string | null
   htmlLang: string | null
   favicon: string | null
+  iconHref: string | null
   og: Record<string, string>
   twitter: Record<string, string>
   headings: { level: number; text: string }[]

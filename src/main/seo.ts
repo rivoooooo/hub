@@ -18,6 +18,7 @@ export interface SeoResult {
   canonical: string | null
   htmlLang: string | null
   favicon: string | null
+  iconHref: string | null
 
   og: Record<string, string>
   twitter: Record<string, string>
@@ -65,6 +66,7 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
       canonical: null,
       htmlLang: null,
       favicon: null,
+      iconHref: null,
       og: {},
       twitter: {},
       headings: [],
@@ -112,6 +114,7 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
       canonical: null,
       htmlLang: null,
       favicon: null,
+      iconHref: null,
       og: {},
       twitter: {},
       headings: [],
@@ -154,11 +157,13 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
 
   // --- Favicon ---
   let favicon: string | null = null
+  let iconHref: string | null = null
   const iconLink =
     $('link[rel="icon"]').first().attr('href') ??
     $('link[rel="shortcut icon"]').first().attr('href') ??
     $('link[rel="apple-touch-icon"]').first().attr('href')
   if (iconLink) {
+    iconHref = iconLink
     try {
       favicon = new URL(iconLink, parsed.origin).href
     } catch {
@@ -189,6 +194,7 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
     canonical,
     htmlLang,
     favicon,
+    iconHref,
     og,
     twitter,
     headings,

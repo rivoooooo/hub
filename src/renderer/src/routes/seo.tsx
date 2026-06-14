@@ -17,6 +17,7 @@ interface SeoResult {
   canonical: string | null
   htmlLang: string | null
   favicon: string | null
+  iconHref: string | null
   og: Record<string, string>
   twitter: Record<string, string>
   headings: { level: number; text: string }[]
@@ -198,6 +199,7 @@ function SeoResults({ result }: { result: SeoResult }): React.JSX.Element {
             <span className={`${valueCls} text-black/30 italic`}>—</span>
           )}
         </div>
+        <MetaRow label="Icon Href" value={result.iconHref} />
       </section>
 
       {/* Headings */}
