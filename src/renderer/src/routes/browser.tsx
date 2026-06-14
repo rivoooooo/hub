@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import WindowSizeInput from '@renderer/components/WindowSizeInput'
 import DockAppFormModal, { type DockFormValues } from '@renderer/components/DockAppFormModal'
@@ -572,11 +572,14 @@ function BridgeNodeEditor({ node, onChange, onRemove, depth }: NodeEditorProps):
 // ---------------------------------------------------------------------------
 
 function BrowserControl(): React.JSX.Element {
+  const navigate = useNavigate()
+
   const [open, setOpen] = useState(false)
   const [url, setUrl] = useState('https://example.com')
   const [width, setWidth] = useState(1024)
   const [height, setHeight] = useState(768)
   const [locked, setLocked] = useState(false)
+  const [userAgent, setUserAgent] = useState('')
   const titleBarModes = ['default', 'hidden', 'transparent'] as const
   type TitleBarMode = (typeof titleBarModes)[number]
 
@@ -608,6 +611,7 @@ function BrowserControl(): React.JSX.Element {
     void window.settingsApi.get().then((s) => {
       setTitleBarMode(s.browserTitleBarMode as TitleBarMode)
       setToolbarVisible(s.toolbarVisible)
+      setUserAgent(s.browserUserAgent)
     })
 
     // Load bridge config
@@ -623,6 +627,7 @@ function BrowserControl(): React.JSX.Element {
       setWidth(s.width)
       setHeight(s.height)
       setLocked(s.locked)
+      setUserAgent(s.userAgent)
     })
 
     return unsubscribe
@@ -667,6 +672,16 @@ function BrowserControl(): React.JSX.Element {
     setToolbarVisible(checked)
     void window.settingsApi.set('toolbarVisible', checked)
   }, [])
+
+  const handleUserAgentChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const ua = e.target.value
+    setUserAgent(ua)
+    void window.browserApi.setUserAgent(ua)
+  }, [])
+
+  const handleViewSeo = useCallback(() => {
+    navigate({ to: '/seo', search: { url: url || undefined } })
+  }, [navigate, url])
 
   // --- Bridge handlers ---
 
@@ -912,6 +927,32 @@ function BrowserControl(): React.JSX.Element {
             <span className="font-body text-[16px] text-black">{m.browser_toolbar_label()}</span>
           </label>
           <p className={`${clsDesc}`}>{m.browser_toolbar_desc()}</p>
+        </div>
+
+        {/* Custom User-Agent */}
+        <div className="pb-[24px]">
+          <label
+            className="block font-headline text-[14px] uppercase tracking-wider text-black pb-[4px]"
+            htmlFor="browser-ua"
+          >
+            {m.browser_user_agent_label()}
+          </label>
+          <input
+            id="browser-ua"
+            className={`w-full ${inputCls}`}
+            type="text"
+            value={userAgent}
+            onChange={handleUserAgentChange}
+            placeholder={m.browser_user_agent_placeholder()}
+          />
+          <p className={`${clsDesc}`}>{m.browser_user_agent_hint()}</p>
+        </div>
+
+        {/* View SEO */}
+        <div className="pb-[24px]">
+          <button className={`w-full ${btnPrimary} text-[12px] py-[8px]`} onClick={handleViewSeo}>
+            {m.browser_view_seo_btn()}
+          </button>
         </div>
 
         {/* Bridge trigger */}

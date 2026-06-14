@@ -6,6 +6,7 @@ interface BrowserState {
   width: number
   height: number
   locked: boolean
+  userAgent: string
 }
 
 interface BrowserApi {
@@ -14,6 +15,7 @@ interface BrowserApi {
   navigate: (url: string) => Promise<BrowserState>
   resize: (width: number, height: number) => Promise<BrowserState>
   setLock: (locked: boolean) => Promise<BrowserState>
+  setUserAgent: (userAgent: string) => Promise<BrowserState>
   getState: () => Promise<BrowserState>
   onStateChange: (callback: (state: BrowserState) => void) => () => void
 }
@@ -24,6 +26,7 @@ interface SettingsData {
   proxyEnabled: boolean
   proxyUrl: string
   seoHistoryDir: string
+  browserUserAgent: string
   defaultUserAgent: string
 }
 

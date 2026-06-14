@@ -66,6 +66,8 @@ const browserApi = {
   resize: (width: number, height: number): Promise<BrowserState> =>
     ipcRenderer.invoke('browser:resize', width, height),
   setLock: (locked: boolean): Promise<BrowserState> => ipcRenderer.invoke('browser:lock', locked),
+  setUserAgent: (userAgent: string): Promise<BrowserState> =>
+    ipcRenderer.invoke('browser:set-user-agent', userAgent),
   getState: (): Promise<BrowserState> => ipcRenderer.invoke('browser:get-state'),
   onStateChange: (callback: (state: BrowserState) => void): (() => void) => {
     const handler = (_event: unknown, state: BrowserState): void => callback(state)

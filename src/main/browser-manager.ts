@@ -11,6 +11,7 @@ export interface BrowserState {
   width: number
   height: number
   locked: boolean
+  userAgent: string
 }
 
 const DEFAULT_STATE: BrowserState = {
@@ -18,7 +19,8 @@ const DEFAULT_STATE: BrowserState = {
   url: 'https://example.com',
   width: 1024,
   height: 768,
-  locked: false
+  locked: false,
+  userAgent: ''
 }
 
 const TOOLBAR_WIDTH = 64
@@ -39,6 +41,7 @@ export class BrowserManager {
 
     const mode = settings.get('browserTitleBarMode')
     this.toolbarMode = settings.get('toolbarVisible')
+    this.state.userAgent = settings.get('browserUserAgent')
 
     const windowOpts: Electron.BrowserWindowConstructorOptions = {
       width: this.state.width,
@@ -68,6 +71,11 @@ export class BrowserManager {
     }
 
     this.window = new BrowserWindow(windowOpts)
+
+    // Apply custom User-Agent if configured
+    if (this.state.userAgent) {
+      this.applyUserAgent()
+    }
 
     const bridgeConfig = bridgeStore.getRaw()
     const bridgeEnabled = bridgeConfig.enabled
@@ -145,6 +153,10 @@ export class BrowserManager {
 
   navigate(url: string): BrowserState {
     this.state.url = url
+    // Apply custom UA before navigating
+    if (this.state.userAgent) {
+      this.applyUserAgent()
+    }
     if (this.toolbarMode && this.contentView) {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       void this.contentView.webContents.loadURL(url)
@@ -211,6 +223,16 @@ export class BrowserManager {
     }
   }
 
+  setUserAgent(ua: string): BrowserState {
+    this.state.userAgent = ua
+    settings.set('browserUserAgent', ua)
+    if (this.state.userAgent) {
+      this.applyUserAgent()
+    }
+    this.notifyRenderers()
+    return { ...this.state }
+  }
+
   /**
    * Re-inject the bridge object into the target page with the latest config.
    * Also ensures the did-finish-load listener is registered so future
@@ -250,6 +272,16 @@ export class BrowserManager {
     if (!this.window || this.window.isDestroyed()) return
     this.window.setMinimumSize(0, 0)
     this.window.setMaximumSize(0, 0)
+  }
+
+  private applyUserAgent(): void {
+    const ua = this.state.userAgent
+    if (!ua) return
+    if (this.toolbarMode && this.contentView && !this.contentView.webContents.isDestroyed()) {
+      this.contentView.webContents.userAgent = ua
+    } else if (this.window && !this.window.isDestroyed()) {
+      this.window.webContents.userAgent = ua
+    }
   }
 
   private notifyRenderers(): void {

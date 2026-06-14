@@ -152,6 +152,7 @@ app.whenReady().then(() => {
   ipcMain.handle('browser:maximize-toggle', () => browserManager!.toggleMaximize())
   ipcMain.handle('browser:close-window', () => browserManager!.close())
   ipcMain.handle('browser:open-devtools', () => browserManager!.openDevTools())
+  ipcMain.handle('browser:set-user-agent', (_event, ua: string) => browserManager!.setUserAgent(ua))
 
   // Settings
   ipcMain.handle('settings:get', () => settings.getAll())
