@@ -95,6 +95,7 @@
   "dock_install_modal_title": "Install to DOCK",
   "dock_install_name": "App Name",
   "dock_install_icon": "Icon URL (optional)",
+  "dock_install_browse": "Browse…",
   "dock_install_window_size": "Window Size",
   "dock_install_titlebar": "Title Bar Style",
   "dock_install_titlebar_default": "Default",

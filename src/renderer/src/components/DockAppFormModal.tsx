@@ -169,14 +169,59 @@ export default function DockAppFormModal({
           <label className="block font-headline text-[12px] uppercase tracking-wider text-black pb-[4px]">
             {m.dock_install_icon()}
           </label>
-          <input
-            className={`w-full ${inputCls}`}
-            type="text"
-            value={iconUrl}
-            onChange={(e) => setIconUrl(e.target.value)}
-            placeholder="https://example.com/favicon.ico"
-            disabled={submitting}
-          />
+          <div className="flex gap-[6px] items-start">
+            <input
+              className={`flex-1 ${inputCls}`}
+              type="text"
+              value={iconUrl}
+              onChange={(e) => setIconUrl(e.target.value)}
+              placeholder="https://example.com/favicon.ico"
+              disabled={submitting}
+            />
+            <button
+              type="button"
+              className={`${btnSmall} whitespace-nowrap ${submitting ? 'opacity-50 pointer-events-none' : ''}`}
+              onClick={() => document.getElementById('icon-file-input')?.click()}
+              disabled={submitting}
+            >
+              {m.dock_install_browse()}
+            </button>
+            <input
+              id="icon-file-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => {
+                  if (typeof reader.result === 'string') setIconUrl(reader.result)
+                }
+                reader.readAsDataURL(file)
+                // Reset so the same file can be re-selected
+                e.target.value = ''
+              }}
+            />
+          </div>
+          {iconUrl && (
+            <div className="mt-[6px] flex items-center gap-[8px]">
+              <img
+                src={iconUrl}
+                alt=""
+                className="w-[24px] h-[24px] border-[2px] border-black object-contain"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).style.display = 'none'
+                }}
+                onLoad={(e) => {
+                  ;(e.target as HTMLImageElement).style.display = ''
+                }}
+              />
+              <span className="font-mono text-[11px] text-black/50 truncate max-w-[300px]">
+                {iconUrl.length > 60 ? iconUrl.slice(0, 60) + '…' : iconUrl}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* User-Agent */}

@@ -43,7 +43,16 @@ export class DockWindowManager {
 
     const child = spawn(
       process.execPath,
-      [runnerPath, '--app-runner', '--app-id', dockApp.id, '--app-name', app.name],
+      [
+        runnerPath,
+        '--app-runner',
+        '--app-id',
+        dockApp.id,
+        '--app-name',
+        dockApp.name,
+        '--user-data-path',
+        app.getPath('userData')
+      ],
       {
         stdio: ['ignore', 'pipe', 'pipe'],
         // On Windows, detach so the child process is fully independent

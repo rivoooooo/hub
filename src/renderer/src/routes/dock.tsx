@@ -1,7 +1,43 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
+import type React from 'react'
 import DockAppFormModal, { type DockFormValues } from '@renderer/components/DockAppFormModal'
 import { m } from '../paraglide/messages.js'
+
+// ---------------------------------------------------------------------------
+// AppIcon — icon display for dock app cards
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders the best available icon for a dock app card:
+ *   1. User-configured iconDataUrl (if set)
+ *   2. Letter fallback (first letter of app name)
+ */
+function AppIcon({ app, isRunning }: { app: DockApp; isRunning: boolean }): React.JSX.Element {
+  // 1. Configured icon
+  if (app.iconDataUrl) {
+    return <img src={app.iconDataUrl} alt={app.name} className="w-full h-full object-contain" />
+  }
+
+  // 2. Letter fallback
+  return (
+    <div
+      className={
+        'w-full h-full flex items-center justify-center ' + (isRunning ? 'bg-white' : 'bg-black')
+      }
+    >
+      <span
+        className={
+          'font-headline text-[24px] uppercase ' + (isRunning ? 'text-black' : 'text-white')
+        }
+      >
+        {app.name.charAt(0).toUpperCase()}
+      </span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/dock')({
   component: function DockDesktop(): React.JSX.Element {
@@ -152,29 +188,7 @@ export const Route = createFileRoute('/dock')({
                 >
                   {/* Icon */}
                   <div className="w-[64px] h-[64px] flex items-center justify-center overflow-hidden">
-                    {app.iconDataUrl ? (
-                      <img
-                        src={app.iconDataUrl}
-                        alt={app.name}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div
-                        className={
-                          'w-full h-full flex items-center justify-center ' +
-                          (isRunning ? 'bg-white' : 'bg-black')
-                        }
-                      >
-                        <span
-                          className={
-                            'font-headline text-[24px] uppercase ' +
-                            (isRunning ? 'text-black' : 'text-white')
-                          }
-                        >
-                          {app.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                    <AppIcon app={app} isRunning={isRunning} />
                   </div>
 
                   {/* Name */}

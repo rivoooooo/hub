@@ -95,6 +95,7 @@
   "dock_install_modal_title": "安装到 DOCK",
   "dock_install_name": "应用名称",
   "dock_install_icon": "图标 URL（可选）",
+  "dock_install_browse": "浏览…",
   "dock_install_window_size": "窗口大小",
   "dock_install_titlebar": "标题栏样式",
   "dock_install_titlebar_default": "默认",
