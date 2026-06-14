@@ -184,21 +184,14 @@ function SeoResults({ result }: { result: SeoResult }): React.JSX.Element {
         <MetaRow label="Robots" value={result.metaRobots} />
         <MetaRow label="Canonical" value={result.canonical} />
         <MetaRow label="HTML Lang" value={result.htmlLang} />
-        {/* Favicon — show icon image + URL */}
+        {/* Favicon — icon image with black square fallback */}
         <div className="flex gap-[12px] py-[6px] border-b-[1px] border-black/10 items-center">
           <span className="font-headline text-[11px] uppercase tracking-[1px] text-black/50 w-[140px] shrink-0 leading-[1.6]">
             Favicon
           </span>
           {result.favicon ? (
             <>
-              <img
-                src={result.favicon}
-                alt="favicon"
-                className="w-[20px] h-[20px] border-[1px] border-black/20 shrink-0"
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
+              <FaviconIcon url={result.favicon} />
               <span className={`${valueCls}`}>{result.favicon}</span>
             </>
           ) : (
@@ -268,5 +261,31 @@ function MetaRow({ label, value }: { label: string; value: string | null }): Rea
       </span>
       <span className={`${valueCls} ${value ? '' : 'text-black/30 italic'}`}>{value ?? '—'}</span>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// FaviconIcon — shows the favicon image, falls back to a black square on error
+// ---------------------------------------------------------------------------
+
+function FaviconIcon({ url }: { url: string }): React.JSX.Element {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <span
+        className="w-[20px] h-[20px] border-[2px] border-black bg-black shrink-0"
+        title={`Favicon failed to load from ${url}`}
+      />
+    )
+  }
+
+  return (
+    <img
+      src={url}
+      alt=""
+      className="w-[20px] h-[20px] border-[2px] border-black shrink-0"
+      onError={() => setFailed(true)}
+    />
   )
 }
