@@ -84,8 +84,12 @@ export function injectBridge(webContents: Electron.WebContents): void {
           if (_fallback !== undefined) {
             try { _parsedFallback = JSON.parse(_fallback); } catch(e) { _parsedFallback = _fallback; }
           }
+          var _dLabel = path.join('.');
           return function() {
             var args = Array.prototype.slice.call(arguments);
+            var _stack = new Error().stack;
+            var _start = Date.now();
+            var _result, _error = null;
             for (var i = 0; i < _entries.length; i++) {
               var entry = _entries[i];
               var allMatch = true;
@@ -110,23 +114,77 @@ export function injectBridge(webContents: Electron.WebContents): void {
                   }
                 }
               }
-              if (allMatch) return entry._parsed;
+              if (allMatch) { _result = entry._parsed; break; }
             }
-            if (_parsedFallback !== undefined) return _parsedFallback;
-            return { error: 'declarative: no matching entry and no fallback' };
+            if (_result === undefined) {
+              if (_parsedFallback !== undefined) {
+                _result = _parsedFallback;
+              } else {
+                _error = 'declarative: no matching entry and no fallback';
+              }
+            }
+            var _duration = Date.now() - _start;
+            try {
+              window.__bridgeCall && window.__bridgeCall.call(
+                ['__bridgeCallLog'],
+                {
+                  path: _dLabel,
+                  args: args,
+                  result: _error ? undefined : _result,
+                  error: _error,
+                  durationMs: _duration,
+                  mode: 'declarative',
+                  stack: _stack,
+                  sourceUrl: window.location.href
+                }
+              );
+            } catch(e) {}
+            if (_error) return { error: _error };
+            return _result;
           };
         }
         // custom sync — inline the user function, no IPC
         if (fc.mode === 'custom') {
           var _codeStr = fc.codeString || '';
           if (_codeStr) {
+            var _label = path.join('.');
             return function() {
               var args = Array.prototype.slice.call(arguments);
+              var _stack = new Error().stack;
+              var _start = Date.now();
+              var _result, _error = null;
+              var _consoleOutput = [];
+              var _origConsole = window.console;
+              window.console = {
+                log: function() { _consoleOutput.push({ level: 'log', message: Array.prototype.map.call(arguments, function(a) { return typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a); }).join(' ') }); },
+                warn: function() { _consoleOutput.push({ level: 'warn', message: Array.prototype.map.call(arguments, function(a) { return typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a); }).join(' ') }); },
+                error: function() { _consoleOutput.push({ level: 'error', message: Array.prototype.map.call(arguments, function(a) { return typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a); }).join(' ') }); }
+              };
               try {
-                return (new Function('args', 'return (' + _codeStr + ')(args)'))(args);
+                _result = (new Function('args', 'return (' + _codeStr + ')(args)'))(args);
               } catch(e) {
-                return { error: 'custom function error: ' + (e.message || String(e)) };
+                _error = 'custom function error: ' + (e.message || String(e));
               }
+              window.console = _origConsole;
+              var _duration = Date.now() - _start;
+              try {
+                window.__bridgeCall && window.__bridgeCall.call(
+                  ['__bridgeCallLog'],
+                  {
+                    path: _label,
+                    args: args,
+                    result: _error ? undefined : _result,
+                    error: _error,
+                    durationMs: _duration,
+                    mode: 'custom',
+                    stack: _stack,
+                    consoleOutput: _consoleOutput.length > 0 ? _consoleOutput : undefined,
+                    sourceUrl: window.location.href
+                  }
+                );
+              } catch(e) {}
+              if (_error) return { error: _error };
+              return _result;
             };
           }
         }
@@ -134,16 +192,36 @@ export function injectBridge(webContents: Electron.WebContents): void {
         if (fc.returnValue && fc.returnValue.trim() !== '') {
           var _val;
           try { _val = JSON.parse(fc.returnValue); } catch(e) { _val = fc.returnValue; }
-          return function() { return _val; };
+          var _sLabel = path.join('.');
+          return function() {
+            var _stack = new Error().stack;
+            try {
+              window.__bridgeCall && window.__bridgeCall.call(
+                ['__bridgeCallLog'],
+                {
+                  path: _sLabel,
+                  args: [],
+                  result: _val,
+                  error: null,
+                  durationMs: 0,
+                  mode: 'static',
+                  stack: _stack,
+                  sourceUrl: window.location.href
+                }
+              );
+            } catch(e) {}
+            return _val;
+          };
         }
         // No valid sync content — fall through to default async IPC
       }
       // Default async mode — route via IPC
       return function() {
         var args = Array.prototype.slice.call(arguments);
+        var _stack = new Error().stack;
         var ch = window.__bridgeCall;
         if (!ch || !ch.call) return Promise.resolve({ error: 'bridge:call not available' });
-        return ch.call(path, args);
+        return ch.call(path, args, { stack: _stack });
       };
     }
     // object type — return a Proxy that lazily resolves children
@@ -159,9 +237,10 @@ export function injectBridge(webContents: Electron.WebContents): void {
       },
       apply: function(target, thisArg, args) {
         // called as a function — route to main process
+        var _stack = new Error().stack;
         var ch = window.__bridgeCall;
         if (!ch || !ch.call) return Promise.resolve({ error: 'bridge:call not available' });
-        return ch.call(path, Array.prototype.slice.call(args));
+        return ch.call(path, Array.prototype.slice.call(args), { stack: _stack });
       }
     };
     return new Proxy(function(){}, handler);

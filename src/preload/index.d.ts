@@ -227,16 +227,50 @@ interface LoggerApi {
   error: (message: string, ...args: unknown[]) => void
 }
 
-interface SandboxConsoleEntry {
-  id: number
-  timestamp: number
+interface ConsoleOutputEntry {
   level: 'log' | 'warn' | 'error'
   message: string
-  path: string
 }
 
-interface SandboxConsoleApi {
-  getEntries: () => Promise<SandboxConsoleEntry[]>
+interface BridgeCallEntry {
+  id: number
+  timestamp: number
+  /** Bridge function path, e.g. "call" or "obj.nested.func" */
+  path: string
+  /** Arguments passed to the function */
+  args: unknown[]
+  /** Return value (on success) */
+  result: unknown
+  /** Error message (on failure) */
+  error: string | null
+  /** Execution duration in milliseconds */
+  durationMs: number
+  /** Function mode */
+  mode: 'custom' | 'static' | 'declarative'
+  /** True when responseMode === 'sync' (ran in-page via new Function) */
+  sync: boolean
+  /** Call stack trace captured at the invocation point */
+  stack?: string
+  /** Console output captured during execution */
+  consoleOutput?: ConsoleOutputEntry[]
+  /** URL of the page that made the call */
+  sourceUrl?: string
+  /** Unique trace ID for correlating related calls */
+  traceId?: string
+  /** Serialized arguments size in bytes (approximate) */
+  argsSize?: number
+}
+
+interface BridgeCallPage {
+  entries: BridgeCallEntry[]
+  total: number
+}
+
+interface BridgeCallApi {
+  getEntries: () => Promise<BridgeCallEntry[]>
+  getPage: (page: number, pageSize: number) => Promise<BridgeCallPage>
+  getById: (id: number) => Promise<BridgeCallEntry | undefined>
+  delete: (id: number) => Promise<boolean>
   clear: () => Promise<void>
 }
 
@@ -258,7 +292,7 @@ declare global {
     __bridgeCall: BridgeCallChannel
     /** Logger API — sends structured logs to the main process */
     loggerApi: LoggerApi
-    /** Sandbox console — output from custom bridge functions */
-    sandboxConsoleApi: SandboxConsoleApi
+    /** Bridge call log — records every bridge function invocation */
+    bridgeCallApi: BridgeCallApi
   }
 }

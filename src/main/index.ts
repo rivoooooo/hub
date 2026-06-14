@@ -13,7 +13,22 @@ import * as logStore from './log-store'
 import { getLogger } from './logger'
 import { getConfigDir } from './config-dir'
 import { runInSandbox } from './sandbox'
-import * as sandboxConsoleStore from './sandbox-console-store'
+import * as bridgeCallStore from './bridge-call-store'
+import type { ConsoleOutputEntry } from './bridge-call-store'
+
+/** Safe JSON.stringify — returns a string even for circular/referenceError cases. */
+function safeJsonStringify(val: unknown): string {
+  try {
+    return JSON.stringify(val)
+  } catch {
+    return String(val)
+  }
+}
+
+/** Generate a short unique trace ID. */
+function makeTraceId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+}
 
 // If this is an app-runner child process, exit immediately —
 // the app-runner entry point handles that case separately.
@@ -219,171 +234,249 @@ app.whenReady().then(() => {
   })
 
   // Bridge IPC call — routes calls from injected Proxy on target pages
-  ipcMain.handle('bridge:call', (_event, path: string[], args: unknown[]) => {
-    const config = bridgeStore.getRaw()
-    if (!config.enabled) {
-      return { error: 'bridge is disabled' }
-    }
+  ipcMain.handle(
+    'bridge:call',
+    (_event, path: string[], args: unknown[], meta?: { stack?: string }) => {
+      const config = bridgeStore.getRaw()
+      const sourceUrl = _event.senderFrame?.url ?? ''
 
-    // Walk the tree following the path segments
-    let node: bridgeStore.BridgeNode | undefined
-    let level: bridgeStore.BridgeNode[] = config.tree
+      // -----------------------------------------------------------------------
+      // Reserved: __bridgeCallLog — sync+custom call log forwarding
+      // -----------------------------------------------------------------------
+      if (path[0] === '__bridgeCallLog') {
+        const entry = args as {
+          path: string
+          args: unknown[]
+          result: unknown
+          error: string | null
+          durationMs: number
+          mode: 'custom' | 'static' | 'declarative'
+          stack?: string
+          consoleOutput?: ConsoleOutputEntry[]
+          sourceUrl?: string
+        }
+        bridgeCallStore.push({
+          ...entry,
+          sync: true,
+          timestamp: Date.now()
+        })
+        return undefined
+      }
 
-    for (const segment of path) {
-      node = level.find((n) => n.name === segment)
+      if (!config.enabled) {
+        return { error: 'bridge is disabled' }
+      }
+
+      // Walk the tree following the path segments
+      let node: bridgeStore.BridgeNode | undefined
+      let level: bridgeStore.BridgeNode[] = config.tree
+
+      for (const segment of path) {
+        node = level.find((n) => n.name === segment)
+        if (!node) {
+          return { error: `path '${path.join('.')}' not found` }
+        }
+        level = node.children ?? []
+      }
+
       if (!node) {
         return { error: `path '${path.join('.')}' not found` }
       }
-      level = node.children ?? []
-    }
 
-    if (!node) {
-      return { error: `path '${path.join('.')}' not found` }
-    }
-
-    // --- Object type — return mock value if configured ---
-    if (node.type === 'object') {
-      if (node.objectConfig?.returnValue) {
-        try {
-          return JSON.parse(node.objectConfig.returnValue)
-        } catch {
-          return node.objectConfig.returnValue
+      // --- Object type — return mock value if configured ---
+      if (node.type === 'object') {
+        if (node.objectConfig?.returnValue) {
+          try {
+            return JSON.parse(node.objectConfig.returnValue)
+          } catch {
+            return node.objectConfig.returnValue
+          }
         }
-      }
-      return { error: `'${path.join('.')}' is an object and cannot be called` }
-    }
-
-    // --- Function type — apply mode routing ---
-    const fnConfig = node.functionConfig
-    if (!fnConfig) {
-      return { error: `function '${path.join('.')}' has no config` }
-    }
-
-    const mode = fnConfig.mode ?? 'static'
-
-    switch (mode) {
-      case 'static': {
-        const val = fnConfig.returnValue ?? ''
-        try {
-          return JSON.parse(val)
-        } catch {
-          return val
-        }
+        return { error: `'${path.join('.')}' is an object and cannot be called` }
       }
 
-      case 'declarative': {
-        // --- New: matchEntries (named conditions) ---
-        if (fnConfig.matchEntries && fnConfig.matchEntries.length > 0) {
-          const params = fnConfig.params ?? []
-          for (const entry of fnConfig.matchEntries) {
-            const allMatch = entry.conditions.every((cond) => {
-              // Find the parameter index by name
-              const paramIdx = params.findIndex((p) => p.name === cond.paramName)
-              if (paramIdx === -1) return false // unknown param → entry fails
-              const arg = args[paramIdx]
-              // If arg is undefined and param is optional, condition passes
-              if (arg === undefined) {
-                const param = params[paramIdx]
-                if (param.optional) return true
-                return false
-              }
-              // No matchValue → accept any value
-              if (!cond.matchValue) return true
-              try {
-                const matchObj = JSON.parse(cond.matchValue)
-                return deepEqual(arg, matchObj)
-              } catch {
-                return String(arg) === cond.matchValue
-              }
-            })
-            if (allMatch) {
-              if (entry.returnValue) {
-                try {
-                  return JSON.parse(entry.returnValue)
-                } catch {
-                  return entry.returnValue
+      // --- Function type — apply mode routing ---
+      const fnConfig = node.functionConfig
+      if (!fnConfig) {
+        return { error: `function '${path.join('.')}' has no config` }
+      }
+
+      const mode = fnConfig.mode ?? 'static'
+      const label = path.join('.')
+      const startTime = performance.now()
+      let result: unknown
+      let error: string | null = null
+      let sandboxConsoleOutput: ConsoleOutputEntry[] | undefined
+
+      try {
+        switch (mode) {
+          case 'static': {
+            const val = fnConfig.returnValue ?? ''
+            try {
+              result = JSON.parse(val)
+            } catch {
+              result = val
+            }
+            break
+          }
+
+          case 'declarative': {
+            // --- New: matchEntries (named conditions) ---
+            if (fnConfig.matchEntries && fnConfig.matchEntries.length > 0) {
+              const params = fnConfig.params ?? []
+              for (const entry of fnConfig.matchEntries) {
+                const allMatch = entry.conditions.every((cond) => {
+                  // Find the parameter index by name
+                  const paramIdx = params.findIndex((p) => p.name === cond.paramName)
+                  if (paramIdx === -1) return false // unknown param → entry fails
+                  const arg = args[paramIdx]
+                  // If arg is undefined and param is optional, condition passes
+                  if (arg === undefined) {
+                    const param = params[paramIdx]
+                    if (param.optional) return true
+                    return false
+                  }
+                  // No matchValue → accept any value
+                  if (!cond.matchValue) return true
+                  try {
+                    const matchObj = JSON.parse(cond.matchValue)
+                    return deepEqual(arg, matchObj)
+                  } catch {
+                    return String(arg) === cond.matchValue
+                  }
+                })
+                if (allMatch) {
+                  if (entry.returnValue) {
+                    try {
+                      result = JSON.parse(entry.returnValue)
+                    } catch {
+                      result = entry.returnValue
+                    }
+                  } else {
+                    result = null
+                  }
+                  break
                 }
               }
-              return null
+              if (result === undefined) {
+                // No entry matched
+                if (fnConfig.fallbackReturnValue) {
+                  try {
+                    result = JSON.parse(fnConfig.fallbackReturnValue)
+                  } catch {
+                    result = fnConfig.fallbackReturnValue
+                  }
+                } else {
+                  error = 'declarative: no matching entry and no fallback'
+                }
+              }
+              break
             }
-          }
-          // No entry matched
-          if (fnConfig.fallbackReturnValue) {
-            try {
-              return JSON.parse(fnConfig.fallbackReturnValue)
-            } catch {
-              return fnConfig.fallbackReturnValue
-            }
-          }
-          return { error: 'declarative: no matching entry and no fallback' }
-        }
 
-        // --- Legacy: per-param positional matching (backward compat) ---
-        // Note: by this point migrateTreeParams has converted old ParamRule[]
-        // into ParamDef[] + MatchEntry[], so this path only runs when params
-        // are defined without matchEntries — simply return mockReturnValue.
-        if (fnConfig.params && fnConfig.params.length > 0) {
-          if (fnConfig.mockReturnValue) {
-            try {
-              return JSON.parse(fnConfig.mockReturnValue)
-            } catch {
-              return fnConfig.mockReturnValue
+            // --- Legacy: per-param positional matching (backward compat) ---
+            // Note: by this point migrateTreeParams has converted old ParamRule[]
+            // into ParamDef[] + MatchEntry[], so this path only runs when params
+            // are defined without matchEntries — simply return mockReturnValue.
+            if (fnConfig.params && fnConfig.params.length > 0) {
+              if (fnConfig.mockReturnValue) {
+                try {
+                  result = JSON.parse(fnConfig.mockReturnValue)
+                } catch {
+                  result = fnConfig.mockReturnValue
+                }
+              } else if (fnConfig.fallbackReturnValue) {
+                try {
+                  result = JSON.parse(fnConfig.fallbackReturnValue)
+                } catch {
+                  result = fnConfig.fallbackReturnValue
+                }
+              } else {
+                result = null
+              }
+              break
             }
-          }
-          // No mockReturnValue but params exist: try fallback
-          if (fnConfig.fallbackReturnValue) {
-            try {
-              return JSON.parse(fnConfig.fallbackReturnValue)
-            } catch {
-              return fnConfig.fallbackReturnValue
-            }
-          }
-          return null
-        }
 
-        // Legacy path — single matchValue against args[0]
-        if (fnConfig.matchValue) {
-          const value = args.length > 0 ? args[0] : undefined
-          let matched = false
-          try {
-            const matchObj = JSON.parse(fnConfig.matchValue)
-            matched = deepEqual(value, matchObj)
-          } catch {
-            matched = String(value) === fnConfig.matchValue
+            // Legacy path — single matchValue against args[0]
+            if (fnConfig.matchValue) {
+              const value = args.length > 0 ? args[0] : undefined
+              let matched = false
+              try {
+                const matchObj = JSON.parse(fnConfig.matchValue)
+                matched = deepEqual(value, matchObj)
+              } catch {
+                matched = String(value) === fnConfig.matchValue
+              }
+              if (!matched) {
+                error = 'declarative value mismatch'
+                break
+              }
+            }
+            if (fnConfig.mockReturnValue) {
+              try {
+                result = JSON.parse(fnConfig.mockReturnValue)
+              } catch {
+                result = fnConfig.mockReturnValue
+              }
+            } else {
+              result = null
+            }
+            break
           }
-          if (!matched) {
-            return { error: 'declarative value mismatch' }
+
+          case 'custom': {
+            const sr = runInSandbox(fnConfig.codeString ?? '', args, label)
+            result = sr.result
+            if (sr.consoleOutput.length > 0) {
+              sandboxConsoleOutput = sr.consoleOutput
+            }
+            break
           }
+
+          default:
+            error = `unknown mode: ${mode}`
         }
-        if (fnConfig.mockReturnValue) {
-          try {
-            return JSON.parse(fnConfig.mockReturnValue)
-          } catch {
-            return fnConfig.mockReturnValue
-          }
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err)
+        if (mode === 'custom') {
+          error = `custom function error: ${error}`
         }
-        return null
       }
 
-      case 'custom': {
-        try {
-          const result = runInSandbox(fnConfig.codeString ?? '', args, path.join('.'))
-          return result
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          return { error: `custom function error: ${msg}` }
-        }
-      }
+      const durationMs = Math.round(performance.now() - startTime)
 
-      default:
-        return { error: `unknown mode: ${mode}` }
+      // Log the call
+      bridgeCallStore.push({
+        timestamp: Date.now(),
+        path: label,
+        args,
+        result: error ? undefined : result,
+        error,
+        durationMs,
+        mode: mode as 'custom' | 'static' | 'declarative',
+        sync: false,
+        stack: meta?.stack,
+        consoleOutput: sandboxConsoleOutput,
+        sourceUrl,
+        traceId: makeTraceId(),
+        argsSize: safeJsonStringify(args).length
+      })
+
+      if (error) {
+        return { error }
+      }
+      return result
     }
-  })
+  )
 
-  // Sandbox console — read / clear output from custom bridge functions
-  ipcMain.handle('sandbox-console:get', () => sandboxConsoleStore.getAll())
-  ipcMain.handle('sandbox-console:clear', () => {
-    sandboxConsoleStore.clear()
+  // Bridge call log — read / clear / delete stored call entries
+  ipcMain.handle('bridge-call-log:get', () => bridgeCallStore.getAll())
+  ipcMain.handle('bridge-call-log:get-page', (_event, page: number, pageSize: number) =>
+    bridgeCallStore.getPage(page, pageSize)
+  )
+  ipcMain.handle('bridge-call-log:get-by-id', (_event, id: number) => bridgeCallStore.getById(id))
+  ipcMain.handle('bridge-call-log:delete', (_event, id: number) => bridgeCallStore.remove(id))
+  ipcMain.handle('bridge-call-log:clear', () => {
+    bridgeCallStore.clear()
   })
 
   // SEO analysis

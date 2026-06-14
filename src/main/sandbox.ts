@@ -15,7 +15,7 @@
  */
 
 import vm from 'node:vm'
-import { push as pushConsoleEntry } from './sandbox-console-store'
+import type { ConsoleOutputEntry } from './bridge-call-store'
 
 // ---------------------------------------------------------------------------
 // Restricted global allowlist
@@ -25,6 +25,7 @@ import { push as pushConsoleEntry } from './sandbox-console-store'
 // is a proven need from custom bridge functions.
 // ---------------------------------------------------------------------------
 
+/** Format arguments similar to console.log's joining behaviour. */
 function fmtConsoleArgs(...args: unknown[]): string {
   return args
     .map((a) => {
@@ -32,7 +33,7 @@ function fmtConsoleArgs(...args: unknown[]): string {
       if (a === null) return 'null'
       if (a === undefined) return 'undefined'
       try {
-        return JSON.stringify(a)
+        return JSON.stringify(a, null, 2)
       } catch {
         return String(a)
       }
@@ -41,8 +42,8 @@ function fmtConsoleArgs(...args: unknown[]): string {
 }
 
 /**
- * Build a console stub object that forwards entries to the shared store.
- * The `label` is baked in so each sandbox invocation gets its own closure.
+ * Build a console stub object that pushes entries into a mutable buffer
+ * so that console output inside the sandbox is captured per-invocation.
  */
 interface SandboxConsole {
   log: (...args: unknown[]) => void
@@ -50,16 +51,16 @@ interface SandboxConsole {
   error: (...args: unknown[]) => void
 }
 
-function createSandboxConsole(label: string): SandboxConsole {
+function createSandboxConsole(output: ConsoleOutputEntry[]): SandboxConsole {
   return {
     log: (...args: unknown[]) => {
-      pushConsoleEntry('log', fmtConsoleArgs(...args), label)
+      output.push({ level: 'log', message: fmtConsoleArgs(...args) })
     },
     warn: (...args: unknown[]) => {
-      pushConsoleEntry('warn', fmtConsoleArgs(...args), label)
+      output.push({ level: 'warn', message: fmtConsoleArgs(...args) })
     },
     error: (...args: unknown[]) => {
-      pushConsoleEntry('error', fmtConsoleArgs(...args), label)
+      output.push({ level: 'error', message: fmtConsoleArgs(...args) })
     }
   }
 }
@@ -127,10 +128,14 @@ const SHARED_GLOBALS: Record<string, unknown> = {
 // Context factory — create a fresh context per invocation
 // ---------------------------------------------------------------------------
 
-function createSandboxContext(args: unknown[], label: string): Record<string, unknown> {
+function createSandboxContext(
+  args: unknown[],
+  _label: string,
+  consoleOutput: ConsoleOutputEntry[]
+): Record<string, unknown> {
   return {
     ...SHARED_GLOBALS,
-    console: createSandboxConsole(label),
+    console: createSandboxConsole(consoleOutput),
     // The function body receives `args` as its sole parameter
     args
   }
@@ -154,16 +159,21 @@ const EXECUTION_TIMEOUT_MS = 5_000
  * @param code   - Anonymous function body string, e.g. `(args) => { const [k,v] = args; return k; }`
  * @param args   - Array of arguments passed from the caller (via bridge Proxy)
  * @param label  - Optional identifier shown in console output (typically the bridge path)
- * @returns      - Return value of the function
+ * @returns      - `{ result, consoleOutput }` — the return value plus any console output captured
  * @throws       - On compilation / execution / timeout errors
  */
-export function runInSandbox(code: string, args: unknown[], label?: string): unknown {
+export function runInSandbox(
+  code: string,
+  args: unknown[],
+  label?: string
+): { result: unknown; consoleOutput: ConsoleOutputEntry[] } {
   if (!code || code.trim().length === 0) {
     throw new Error('custom function has no code')
   }
 
   const wrappedCode = `(function(){ return (${code})(args) })()`
-  const context = createSandboxContext(args, label ?? 'bridge')
+  const consoleOutput: ConsoleOutputEntry[] = []
+  const context = createSandboxContext(args, label ?? 'bridge', consoleOutput)
 
   vm.createContext(context, {
     // Prevent the sandbox from leaking back to the host context
@@ -180,7 +190,7 @@ export function runInSandbox(code: string, args: unknown[], label?: string): unk
     breakOnSigint: true // allow Ctrl+C to break infinite loops in dev
   })
 
-  return result
+  return { result, consoleOutput }
 }
 
 /**

@@ -120,21 +120,45 @@ const browserControls = {
 }
 
 // ---------------------------------------------------------------------------
-// Sandbox Console API — view output from custom bridge functions
+// Bridge Call Log API — view call history from bridge functions
 // ---------------------------------------------------------------------------
 
-// Sandbox console entry type
-interface SandboxConsoleEntry {
-  id: number
-  timestamp: number
+// Bridge call entry type (mirrors main/bridge-call-store.ts)
+interface ConsoleOutputEntry {
   level: 'log' | 'warn' | 'error'
   message: string
-  path: string
 }
 
-const sandboxConsoleApi = {
-  getEntries: (): Promise<SandboxConsoleEntry[]> => ipcRenderer.invoke('sandbox-console:get'),
-  clear: (): Promise<void> => ipcRenderer.invoke('sandbox-console:clear')
+interface BridgeCallEntry {
+  id: number
+  timestamp: number
+  path: string
+  args: unknown[]
+  result: unknown
+  error: string | null
+  durationMs: number
+  mode: 'custom' | 'static' | 'declarative'
+  sync: boolean
+  stack?: string
+  consoleOutput?: ConsoleOutputEntry[]
+  sourceUrl?: string
+  traceId?: string
+  argsSize?: number
+}
+
+interface BridgeCallPage {
+  entries: BridgeCallEntry[]
+  total: number
+}
+
+const bridgeCallApi = {
+  getEntries: (): Promise<BridgeCallEntry[]> => ipcRenderer.invoke('bridge-call-log:get'),
+  getPage: (page: number, pageSize: number): Promise<BridgeCallPage> =>
+    ipcRenderer.invoke('bridge-call-log:get-page', page, pageSize),
+  getById: (id: number): Promise<BridgeCallEntry | undefined> =>
+    ipcRenderer.invoke('bridge-call-log:get-by-id', id),
+  delete: (id: number): Promise<boolean> => ipcRenderer.invoke('bridge-call-log:delete', id),
+  clear: (): Promise<void> => ipcRenderer.invoke('bridge-call-log:clear')
 }
 
 // ---------------------------------------------------------------------------
@@ -330,7 +354,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('seoApi', seoApi)
     contextBridge.exposeInMainWorld('dockApi', dockApi)
     contextBridge.exposeInMainWorld('logsApi', logsApi)
-    contextBridge.exposeInMainWorld('sandboxConsoleApi', sandboxConsoleApi)
+    contextBridge.exposeInMainWorld('bridgeCallApi', bridgeCallApi)
 
     // Bridge IPC channel — used by injected Proxy bridge on target pages
     contextBridge.exposeInMainWorld('__bridgeCall', {
@@ -362,7 +386,7 @@ if (process.contextIsolated) {
   // @ts-expect-error (define in dts)
   window.logsApi = logsApi
   // @ts-expect-error (define in dts)
-  window.sandboxConsoleApi = sandboxConsoleApi
+  window.bridgeCallApi = bridgeCallApi
   // @ts-expect-error (define in dts)
   window.__bridgeCall = {
     call: (path: string[], ...args: unknown[]): Promise<unknown> =>
