@@ -18,10 +18,6 @@ interface SeoResult {
   htmlLang: string | null
   og: Record<string, string>
   twitter: Record<string, string>
-  headings: { level: number; text: string }[]
-  linkStats: { total: number; internal: number; external: number; hashOnly: number }
-  imagesMissingAlt: number
-  hreflangs: { hreflang: string; href: string }[]
   issues: string[]
 }
 
@@ -207,59 +203,6 @@ function SeoResults({ result }: { result: SeoResult }): React.JSX.Element {
           ))}
         </section>
       )}
-
-      {/* Headings */}
-      <section>
-        <h2 className={sectionTitle}>
-          {m.seo_headings()} ({result.headings.length})
-        </h2>
-        {result.headings.length === 0 ? (
-          <p className="font-mono text-[14px] text-black/50 italic">{m.seo_no_headings()}</p>
-        ) : (
-          <div className="space-y-[4px]">
-            {result.headings.map((h, i) => (
-              <div
-                key={i}
-                className="font-mono text-[14px] leading-[1.5] text-black"
-                style={{ paddingLeft: `${(h.level - 1) * 20}px` }}
-              >
-                <span className="text-black/40 font-bold mr-[8px]">H{h.level}</span>
-                {h.text}
-              </div>
-            ))}
-          </div>
-        )}
-        {result.headings.filter((h) => h.level === 1).length > 1 && (
-          <p className="font-mono text-[12px] text-error mt-[8px]">⚠ Multiple H1 tags detected</p>
-        )}
-      </section>
-
-      {/* Links */}
-      <section>
-        <h2 className={sectionTitle}>{m.seo_links()}</h2>
-        <div className="flex gap-[24px] flex-wrap">
-          <StatBox label="Total" value={result.linkStats.total} />
-          <StatBox label="Internal" value={result.linkStats.internal} />
-          <StatBox label="External" value={result.linkStats.external} />
-          <StatBox label="Hash-only" value={result.linkStats.hashOnly} />
-        </div>
-      </section>
-
-      {/* Images */}
-      <section>
-        <h2 className={sectionTitle}>{m.seo_images()}</h2>
-        <StatBox label={m.seo_missing_alt()} value={result.imagesMissingAlt} />
-      </section>
-
-      {/* Hreflang */}
-      {result.hreflangs.length > 0 && (
-        <section>
-          <h2 className={sectionTitle}>{m.seo_hreflang()}</h2>
-          {result.hreflangs.map((hl, i) => (
-            <MetaRow key={i} label={hl.hreflang} value={hl.href} />
-          ))}
-        </section>
-      )}
     </div>
   )
 }
@@ -275,17 +218,6 @@ function MetaRow({ label, value }: { label: string; value: string | null }): Rea
         {label}
       </span>
       <span className={`${valueCls} ${value ? '' : 'text-black/30 italic'}`}>{value ?? '—'}</span>
-    </div>
-  )
-}
-
-function StatBox({ label, value }: { label: string; value: number }): React.JSX.Element {
-  return (
-    <div className="border-[3px] border-black p-[12px] min-w-[100px] text-center">
-      <span className="block font-headline text-[28px] leading-none text-black">{value}</span>
-      <span className="block font-headline text-[11px] uppercase tracking-[1px] text-black/50 pt-[4px]">
-        {label}
-      </span>
     </div>
   )
 }

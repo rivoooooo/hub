@@ -21,21 +21,6 @@ export interface SeoResult {
   og: Record<string, string>
   twitter: Record<string, string>
 
-  headings: {
-    level: number
-    text: string
-  }[]
-
-  linkStats: {
-    total: number
-    internal: number
-    external: number
-    hashOnly: number
-  }
-
-  imagesMissingAlt: number
-  hreflangs: { hreflang: string; href: string }[]
-
   issues: string[]
 }
 
@@ -62,9 +47,8 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
     targetUrl = 'https://' + targetUrl
   }
 
-  let parsed: URL
   try {
-    parsed = new URL(targetUrl)
+    new URL(targetUrl)
   } catch {
     return {
       url,
@@ -78,10 +62,6 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
       htmlLang: null,
       og: {},
       twitter: {},
-      headings: [],
-      linkStats: { total: 0, internal: 0, external: 0, hashOnly: 0 },
-      imagesMissingAlt: 0,
-      hreflangs: [],
       issues: ['Invalid URL — could not parse']
     }
   }
@@ -127,10 +107,6 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
       htmlLang: null,
       og: {},
       twitter: {},
-      headings: [],
-      linkStats: { total: 0, internal: 0, external: 0, hashOnly: 0 },
-      imagesMissingAlt: 0,
-      hreflangs: [],
       issues
     }
   }
@@ -168,64 +144,6 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
     if (name && content) twitter[name] = content
   })
 
-  // --- Headings ---
-  const headings: { level: number; text: string }[] = []
-  for (let level = 1; level <= 6; level++) {
-    $(`h${level}`).each((_, el) => {
-      const text = $(el).text().trim()
-      if (text) headings.push({ level, text })
-    })
-  }
-
-  const h1Count = headings.filter((h) => h.level === 1).length
-  if (h1Count === 0) issues.push('No <h1> tag found')
-  if (h1Count > 1) issues.push(`Multiple <h1> tags (${h1Count})`)
-
-  // --- Links ---
-  const origin = parsed.origin
-  let linkTotal = 0
-  let linkInternal = 0
-  let linkExternal = 0
-  let linkHashOnly = 0
-
-  $('a[href]').each((_, el) => {
-    const href = $(el).attr('href')?.trim() ?? ''
-    if (!href) return
-    linkTotal++
-    if (href.startsWith('#')) {
-      linkHashOnly++
-    } else if (href.startsWith('/') || href.startsWith(origin)) {
-      linkInternal++
-    } else if (/^https?:\/\//i.test(href)) {
-      linkExternal++
-    } else {
-      linkInternal++ // relative path
-    }
-  })
-
-  // --- Images missing alt ---
-  let imagesMissingAlt = 0
-  $('img').each((_, el) => {
-    const alt = $(el).attr('alt')
-    if (alt === undefined || alt.trim() === '') {
-      imagesMissingAlt++
-    }
-  })
-
-  if (imagesMissingAlt > 0) {
-    issues.push(`${imagesMissingAlt} image(s) missing alt text`)
-  }
-
-  // --- Hreflang ---
-  const hreflangs: { hreflang: string; href: string }[] = []
-  $('link[rel="alternate"][hreflang]').each((_, el) => {
-    const hreflang = $(el).attr('hreflang')?.trim()
-    const href = $(el).attr('href')?.trim()
-    if (hreflang && href) {
-      hreflangs.push({ hreflang, href })
-    }
-  })
-
   return {
     url,
     fetchTimeMs,
@@ -238,15 +156,6 @@ async function analyzeSeo(url: string): Promise<SeoResult> {
     htmlLang,
     og,
     twitter,
-    headings,
-    linkStats: {
-      total: linkTotal,
-      internal: linkInternal,
-      external: linkExternal,
-      hashOnly: linkHashOnly
-    },
-    imagesMissingAlt,
-    hreflangs,
     issues
   }
 }

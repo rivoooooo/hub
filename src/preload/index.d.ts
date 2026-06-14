@@ -110,10 +110,6 @@ interface SeoResult {
   htmlLang: string | null
   og: Record<string, string>
   twitter: Record<string, string>
-  headings: { level: number; text: string }[]
-  linkStats: { total: number; internal: number; external: number; hashOnly: number }
-  imagesMissingAlt: number
-  hreflangs: { hreflang: string; href: string }[]
   issues: string[]
 }
 

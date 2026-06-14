@@ -63,12 +63,5 @@
   "seo_meta": "元数据",
   "seo_og": "Open Graph",
   "seo_twitter": "Twitter Card",
-  "seo_headings": "标题结构",
-  "seo_links": "链接",
-  "seo_images": "图片",
-  "seo_missing_alt": "缺少 alt 文本",
-  "seo_hreflang": "Hreflang 标签",
-  "seo_no_headings": "未找到标题",
-  "seo_no_issues": "未发现问题",
-  "seo_issues_fmt": "{count} 个问题"
+  "seo_no_issues": "未发现问题"
 }

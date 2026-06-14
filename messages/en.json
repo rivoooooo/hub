@@ -63,12 +63,5 @@
   "seo_meta": "Meta",
   "seo_og": "Open Graph",
   "seo_twitter": "Twitter Card",
-  "seo_headings": "Headings",
-  "seo_links": "Links",
-  "seo_images": "Images",
-  "seo_missing_alt": "Missing alt text",
-  "seo_hreflang": "Hreflang Tags",
-  "seo_no_headings": "No headings found",
-  "seo_no_issues": "No issues found",
-  "seo_issues_fmt": "{count} issue(s)"
+  "seo_no_issues": "No issues found"
 }
