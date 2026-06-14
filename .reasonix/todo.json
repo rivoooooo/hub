@@ -1,0 +1,41 @@
+[
+  {
+    "description": "Separate data model: ParamDef + MatchEntry",
+    "steps": [
+      {
+        "description": "Update types in bridge-store.ts (ParamDef, MatchCondition, MatchEntry + migration)",
+        "status": "completed"
+      },
+      { "description": "Sync types in preload/index.ts", "status": "completed" },
+      { "description": "Sync types in preload/index.d.ts", "status": "completed" }
+    ]
+  },
+  {
+    "description": "Update main process bridge:call handler for matchEntries",
+    "steps": [
+      {
+        "description": "Rewrite bridge:call to iterate matchEntries by param-name lookup",
+        "status": "completed"
+      }
+    ]
+  },
+  {
+    "description": "Redesign UI form: Pure signature params + Match Rules editor",
+    "steps": [
+      { "description": "Update browser.tsx types to new model", "status": "completed" },
+      {
+        "description": "Rewrite declarative-mode UI: params section (name+optional only), match rules section, fallback",
+        "status": "completed"
+      }
+    ]
+  },
+  {
+    "description": "Verify typechecks pass on both targets",
+    "steps": [
+      {
+        "description": "Run tsc on tsconfig.node.json and tsconfig.web.json",
+        "status": "completed"
+      }
+    ]
+  }
+]

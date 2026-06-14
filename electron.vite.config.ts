@@ -7,7 +7,22 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js'
 
 export default defineConfig({
   main: {},
-  preload: {},
+  preload: {
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/preload/index.ts'),
+          'browser-preload': resolve('src/preload/browser-preload.ts')
+        },
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js',
+          chunkFileNames: 'chunks/[name]-[hash].js'
+        },
+        external: ['electron']
+      }
+    }
+  },
   renderer: {
     resolve: {
       alias: {

@@ -28,17 +28,52 @@ interface SettingsApi {
   set: (key: string, value: unknown) => Promise<void>
 }
 
-interface BridgeMethod {
+// --- New tree-based bridge types ---
+
+interface ParamDef {
   name: string
-  acceptParams: boolean
-  code: boolean
-  returnValue: string
+  optional?: boolean
+}
+
+interface MatchCondition {
+  paramName: string
+  matchValue?: string
+}
+
+interface MatchEntry {
+  conditions: MatchCondition[]
+  returnValue?: string
+}
+
+interface BridgeFunctionConfig {
+  acceptParams?: boolean
+  mode?: 'static' | 'declarative' | 'custom'
+  returnValue?: string
+  matchValue?: string
+  mockReturnValue?: string
+  codeString?: string
+  params?: ParamDef[]
+  matchEntries?: MatchEntry[]
+  fallbackReturnValue?: string
+  responseMode?: 'async' | 'sync'
+}
+
+interface BridgeObjectConfig {
+  returnValue?: string
+}
+
+interface BridgeNode {
+  name: string
+  type: 'object' | 'function'
+  children?: BridgeNode[]
+  functionConfig?: BridgeFunctionConfig
+  objectConfig?: BridgeObjectConfig
 }
 
 interface BridgeFullConfig {
   enabled: boolean
   globalName: string
-  methods: BridgeMethod[]
+  tree: BridgeNode[]
 }
 
 interface BridgeApi {
@@ -46,6 +81,10 @@ interface BridgeApi {
   setConfig: (config: BridgeFullConfig) => Promise<void>
   exportConfig: () => Promise<string>
   importConfig: (json: string) => Promise<BridgeFullConfig>
+}
+
+interface BridgeCallChannel {
+  call: (path: string[], ...args: unknown[]) => Promise<unknown>
 }
 
 interface BrowserControls {
@@ -65,5 +104,7 @@ declare global {
     bridgeApi: BridgeApi
     settingsApi: SettingsApi
     browserControls: BrowserControls
+    /** Bridge IPC channel — used by injected Proxy bridge on target pages */
+    __bridgeCall: BridgeCallChannel
   }
 }

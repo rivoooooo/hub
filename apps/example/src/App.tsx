@@ -16,7 +16,7 @@ function App(): ReactNode {
         <button
           className="counter"
           onClick={() => {
-            console.log(window['bridge']['new']())
+            console.log(window['bridge']['call']('info'))
           }}
         >
           Look Window

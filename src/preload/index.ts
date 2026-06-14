@@ -1,7 +1,60 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
+// ---------------------------------------------------------------------------
+// Shared bridge types — kept in sync with main/bridge-store.ts
+// ---------------------------------------------------------------------------
+
+export interface ParamDef {
+  name: string
+  optional?: boolean
+}
+
+export interface MatchCondition {
+  paramName: string
+  matchValue?: string
+}
+
+export interface MatchEntry {
+  conditions: MatchCondition[]
+  returnValue?: string
+}
+
+export interface BridgeFunctionConfig {
+  acceptParams?: boolean
+  mode?: 'static' | 'declarative' | 'custom'
+  returnValue?: string
+  matchValue?: string
+  mockReturnValue?: string
+  codeString?: string
+  params?: ParamDef[]
+  matchEntries?: MatchEntry[]
+  fallbackReturnValue?: string
+  responseMode?: 'async' | 'sync'
+}
+
+export interface BridgeObjectConfig {
+  returnValue?: string
+}
+
+export interface BridgeNode {
+  name: string
+  type: 'object' | 'function'
+  children?: BridgeNode[]
+  functionConfig?: BridgeFunctionConfig
+  objectConfig?: BridgeObjectConfig
+}
+
+export interface BridgeFullConfig {
+  enabled: boolean
+  globalName: string
+  tree: BridgeNode[]
+}
+
+// ---------------------------------------------------------------------------
+// Custom APIs for the renderer (control panel)
+// ---------------------------------------------------------------------------
+
 const api = {
   openRoute: (route: string): void => ipcRenderer.send('open-route', route)
 }
@@ -25,19 +78,6 @@ const settingsApi = {
   get: (): Promise<SettingsData> => ipcRenderer.invoke('settings:get'),
   set: (key: string, value: unknown): Promise<void> =>
     ipcRenderer.invoke('settings:set', key, value)
-}
-
-interface BridgeMethod {
-  name: string
-  acceptParams: boolean
-  code: boolean
-  returnValue: string
-}
-
-interface BridgeFullConfig {
-  enabled: boolean
-  globalName: string
-  methods: BridgeMethod[]
 }
 
 interface BridgeApi {
@@ -78,9 +118,10 @@ interface SettingsData {
   toolbarVisible: boolean
 }
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
+// ---------------------------------------------------------------------------
+// Context bridge exposure
+// ---------------------------------------------------------------------------
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
@@ -89,6 +130,12 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('bridgeApi', bridgeApi)
     contextBridge.exposeInMainWorld('settingsApi', settingsApi)
     contextBridge.exposeInMainWorld('browserControls', browserControls)
+
+    // Bridge IPC channel — used by injected Proxy bridge on target pages
+    contextBridge.exposeInMainWorld('__bridgeCall', {
+      call: (path: string[], ...args: unknown[]): Promise<unknown> =>
+        ipcRenderer.invoke('bridge:call', path, ...args)
+    })
   } catch (error) {
     console.error(error)
   }
@@ -105,4 +152,9 @@ if (process.contextIsolated) {
   window.settingsApi = settingsApi
   // @ts-expect-error (define in dts)
   window.browserControls = browserControls
+  // @ts-expect-error (define in dts)
+  window.__bridgeCall = {
+    call: (path: string[], ...args: unknown[]): Promise<unknown> =>
+      ipcRenderer.invoke('bridge:call', path, ...args)
+  }
 }

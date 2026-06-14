@@ -163,6 +163,172 @@ app.whenReady().then(() => {
     return config
   })
 
+  // Bridge IPC call — routes calls from injected Proxy on target pages
+  ipcMain.handle('bridge:call', (_event, path: string[], args: unknown[]) => {
+    const config = bridgeStore.getRaw()
+    if (!config.enabled) {
+      return { error: 'bridge is disabled' }
+    }
+
+    // Walk the tree following the path segments
+    let node: bridgeStore.BridgeNode | undefined
+    let level: bridgeStore.BridgeNode[] = config.tree
+
+    for (const segment of path) {
+      node = level.find((n) => n.name === segment)
+      if (!node) {
+        return { error: `path '${path.join('.')}' not found` }
+      }
+      level = node.children ?? []
+    }
+
+    if (!node) {
+      return { error: `path '${path.join('.')}' not found` }
+    }
+
+    // --- Object type — return mock value if configured ---
+    if (node.type === 'object') {
+      if (node.objectConfig?.returnValue) {
+        try {
+          return JSON.parse(node.objectConfig.returnValue)
+        } catch {
+          return node.objectConfig.returnValue
+        }
+      }
+      return { error: `'${path.join('.')}' is an object and cannot be called` }
+    }
+
+    // --- Function type — apply mode routing ---
+    const fnConfig = node.functionConfig
+    if (!fnConfig) {
+      return { error: `function '${path.join('.')}' has no config` }
+    }
+
+    const mode = fnConfig.mode ?? 'static'
+
+    switch (mode) {
+      case 'static': {
+        const val = fnConfig.returnValue ?? ''
+        try {
+          return JSON.parse(val)
+        } catch {
+          return val
+        }
+      }
+
+      case 'declarative': {
+        // --- New: matchEntries (named conditions) ---
+        if (fnConfig.matchEntries && fnConfig.matchEntries.length > 0) {
+          const params = fnConfig.params ?? []
+          for (const entry of fnConfig.matchEntries) {
+            const allMatch = entry.conditions.every((cond) => {
+              // Find the parameter index by name
+              const paramIdx = params.findIndex((p) => p.name === cond.paramName)
+              if (paramIdx === -1) return false // unknown param → entry fails
+              const arg = args[paramIdx]
+              // If arg is undefined and param is optional, condition passes
+              if (arg === undefined) {
+                const param = params[paramIdx]
+                if (param.optional) return true
+                return false
+              }
+              // No matchValue → accept any value
+              if (!cond.matchValue) return true
+              try {
+                const matchObj = JSON.parse(cond.matchValue)
+                return deepEqual(arg, matchObj)
+              } catch {
+                return String(arg) === cond.matchValue
+              }
+            })
+            if (allMatch) {
+              if (entry.returnValue) {
+                try {
+                  return JSON.parse(entry.returnValue)
+                } catch {
+                  return entry.returnValue
+                }
+              }
+              return null
+            }
+          }
+          // No entry matched
+          if (fnConfig.fallbackReturnValue) {
+            try {
+              return JSON.parse(fnConfig.fallbackReturnValue)
+            } catch {
+              return fnConfig.fallbackReturnValue
+            }
+          }
+          return { error: 'declarative: no matching entry and no fallback' }
+        }
+
+        // --- Legacy: per-param positional matching (backward compat) ---
+        // Note: by this point migrateTreeParams has converted old ParamRule[]
+        // into ParamDef[] + MatchEntry[], so this path only runs when params
+        // are defined without matchEntries — simply return mockReturnValue.
+        if (fnConfig.params && fnConfig.params.length > 0) {
+          if (fnConfig.mockReturnValue) {
+            try {
+              return JSON.parse(fnConfig.mockReturnValue)
+            } catch {
+              return fnConfig.mockReturnValue
+            }
+          }
+          // No mockReturnValue but params exist: try fallback
+          if (fnConfig.fallbackReturnValue) {
+            try {
+              return JSON.parse(fnConfig.fallbackReturnValue)
+            } catch {
+              return fnConfig.fallbackReturnValue
+            }
+          }
+          return null
+        }
+
+        // Legacy path — single matchValue against args[0]
+        if (fnConfig.matchValue) {
+          const value = args.length > 0 ? args[0] : undefined
+          let matched = false
+          try {
+            const matchObj = JSON.parse(fnConfig.matchValue)
+            matched = deepEqual(value, matchObj)
+          } catch {
+            matched = String(value) === fnConfig.matchValue
+          }
+          if (!matched) {
+            return { error: 'declarative value mismatch' }
+          }
+        }
+        if (fnConfig.mockReturnValue) {
+          try {
+            return JSON.parse(fnConfig.mockReturnValue)
+          } catch {
+            return fnConfig.mockReturnValue
+          }
+        }
+        return null
+      }
+
+      case 'custom': {
+        const codeStr = fnConfig.codeString
+        if (!codeStr) {
+          return { error: 'custom function has no code' }
+        }
+        try {
+          const fn = new Function('args', `return (${codeStr})(args)`)
+          return fn(args)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          return { error: `custom function error: ${msg}` }
+        }
+      }
+
+      default:
+        return { error: `unknown mode: ${mode}` }
+    }
+  })
+
   createWindow()
   isReady = true
 
@@ -185,3 +351,23 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Recursive deep-equal for declarative value matching. */
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return false
+  if (typeof a !== typeof b) return false
+  if (typeof a === 'object') {
+    const aObj = a as Record<string, unknown>
+    const bObj = b as Record<string, unknown>
+    const aKeys = Object.keys(aObj)
+    const bKeys = Object.keys(bObj)
+    if (aKeys.length !== bKeys.length) return false
+    return aKeys.every((key) => deepEqual(aObj[key], bObj[key]))
+  }
+  return a === b
+}
