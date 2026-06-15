@@ -297,8 +297,19 @@ async function createAppWindow(appCfg: DockApp): Promise<void> {
   if (!frame) {
     windowOpts.frame = false
   } else if (titleBarStyle === 'hidden') {
-    windowOpts.titleBarStyle = 'hidden'
-    windowOpts.titleBarOverlay = process.platform === 'darwin' ? { height: 38 } : undefined
+    if (process.platform === 'darwin') {
+      // macOS: hidden title bar with native traffic lights
+      windowOpts.titleBarStyle = 'hidden'
+      windowOpts.titleBarOverlay = { height: 38 }
+    } else if (process.platform === 'linux') {
+      // Linux: frameless + styled overlay for brutalist-themed window controls
+      windowOpts.frame = false
+      windowOpts.titleBarOverlay = { height: 38, color: '#000000', symbolColor: '#ffffff' }
+    } else {
+      // Windows: styled overlay on frameless window
+      windowOpts.frame = false
+      windowOpts.titleBarOverlay = { height: 38, color: '#000000', symbolColor: '#ffffff' }
+    }
   } else if (titleBarStyle === 'none') {
     windowOpts.frame = false
   }

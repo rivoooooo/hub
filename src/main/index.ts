@@ -92,10 +92,12 @@ if (!IS_APP_RUNNER) {
   function titleBarOptions(): {
     titleBarStyle?: 'hidden' | 'default'
     titleBarOverlay?: { height: number }
+    frame?: boolean
   } {
     return {
       titleBarStyle: 'hidden',
-      titleBarOverlay: process.platform === 'darwin' ? { height: 47 } : undefined
+      titleBarOverlay: process.platform === 'darwin' ? { height: 47 } : undefined,
+      frame: process.platform === 'linux' ? false : undefined
     }
   }
 
@@ -243,6 +245,27 @@ if (!IS_APP_RUNNER) {
       ipcMain.handle('browser:set-user-agent', (_event, ua: string) =>
         browserManager!.setUserAgent(ua)
       )
+
+      // Window controls for main/toolbar windows (used with custom title bars on Linux)
+      ipcMain.handle('win:minimize', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (win) win.minimize()
+      })
+      ipcMain.handle('win:maximize-toggle', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (win) {
+          if (win.isMaximized()) win.unmaximize()
+          else win.maximize()
+        }
+      })
+      ipcMain.handle('win:close', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (win) win.close()
+      })
+      ipcMain.handle('win:is-maximized', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        return win ? win.isMaximized() : false
+      })
 
       // Settings
       ipcMain.handle('settings:get', () => settings.getAll())

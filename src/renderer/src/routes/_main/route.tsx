@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
 import { m } from '../../paraglide/messages.js'
 import { useLocale } from '../../useLocale'
 import { useEffect } from 'react'
+import { WindowControls } from '@renderer/components/WindowControls'
 
 // ---------------------------------------------------------------------------
 // Main layout — nav bar for all app routes
@@ -24,7 +25,7 @@ export const Route = createFileRoute('/_main')({
     }, [locale])
 
     return (
-      <>
+      <div className="flex flex-col size-full">
         <nav
           className="fixed top-0 left-0 right-0 z-100 flex gap-0 bg-white border-b-[3px] border-black"
           style={
@@ -67,9 +68,12 @@ export const Route = createFileRoute('/_main')({
             {m.nav_dock()}
           </Link>
           <div className="flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+          {!isMac && <WindowControls />}
         </nav>
-        <Outlet />
-      </>
+        <main className="size-size-full overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     )
   }
 })

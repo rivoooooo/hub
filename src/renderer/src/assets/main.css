@@ -14,6 +14,12 @@
   --font-mono: 'Space Mono', monospace;
 }
 
+html,
+body {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
 body {
   background: white;
   color: black;

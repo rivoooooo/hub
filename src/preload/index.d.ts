@@ -100,6 +100,13 @@ interface BrowserControls {
   openDevTools: () => Promise<void>
 }
 
+interface WindowControls {
+  minimize: () => Promise<void>
+  toggleMaximize: () => Promise<void>
+  close: () => Promise<void>
+  isMaximized: () => Promise<boolean>
+}
+
 // --- SEO types ---
 
 interface SeoResult {
@@ -285,6 +292,7 @@ declare global {
     bridgeApi: BridgeApi
     settingsApi: SettingsApi
     browserControls: BrowserControls
+    windowControls: WindowControls
     seoApi: SeoApi
     dockApi: DockApi
     logsApi: LogsApi

@@ -119,6 +119,13 @@ const browserControls = {
   openDevTools: (): Promise<void> => ipcRenderer.invoke('browser:open-devtools')
 }
 
+const windowControls = {
+  minimize: (): Promise<void> => ipcRenderer.invoke('win:minimize'),
+  toggleMaximize: (): Promise<void> => ipcRenderer.invoke('win:maximize-toggle'),
+  close: (): Promise<void> => ipcRenderer.invoke('win:close'),
+  isMaximized: (): Promise<boolean> => ipcRenderer.invoke('win:is-maximized')
+}
+
 // ---------------------------------------------------------------------------
 // Bridge Call Log API — view call history from bridge functions
 // ---------------------------------------------------------------------------
@@ -351,6 +358,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('bridgeApi', bridgeApi)
     contextBridge.exposeInMainWorld('settingsApi', settingsApi)
     contextBridge.exposeInMainWorld('browserControls', browserControls)
+    contextBridge.exposeInMainWorld('windowControls', windowControls)
     contextBridge.exposeInMainWorld('seoApi', seoApi)
     contextBridge.exposeInMainWorld('dockApi', dockApi)
     contextBridge.exposeInMainWorld('logsApi', logsApi)
@@ -379,6 +387,8 @@ if (process.contextIsolated) {
   window.settingsApi = settingsApi
   // @ts-expect-error (define in dts)
   window.browserControls = browserControls
+  // @ts-expect-error (define in dts)
+  window.windowControls = windowControls
   // @ts-expect-error (define in dts)
   window.seoApi = seoApi
   // @ts-expect-error (define in dts)

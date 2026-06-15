@@ -783,7 +783,7 @@ function BrowserControl(): React.JSX.Element {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex ">
       <div className="flex-1 pt-[120px] px-[24px] pb-[40px]">
         <div className="flex items-center justify-between pb-[16px]">
           <h1 className="font-headline text-[64px] leading-none text-black">{m.browser_title()}</h1>

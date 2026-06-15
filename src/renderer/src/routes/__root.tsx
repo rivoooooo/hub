@@ -5,10 +5,10 @@ import { createRootRoute, Outlet } from '@tanstack/react-router'
 export const Route = createRootRoute({
   component: function Root(): React.JSX.Element {
     return (
-      <>
+      <div className="size-full overflow-hidden">
         <Outlet />
         {/*<TanStackRouterDevtools />*/}
-      </>
+      </div>
     )
   }
 })
